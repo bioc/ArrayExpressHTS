@@ -1,0 +1,53 @@
+Comment[ArrayExpressAccession]	E-GEOD-16190
+Investigation Title	RNA-Seq of human to detection of single nucleotide variations in expressed exons
+Comment[Submitted Name]	Detection of single nucleotide variations in expressed exons of the human genome using RNA-Seq
+Publication Title	Detection of single nucleotide variations in expressed exons of the human genome using RNA-Seq.
+Publication Author List	Wei Chepelev, Zhao Tang
+Publication DOI	
+PubMed ID	19528076
+Experimental Design	unknown_experiment_design_type	transcription profiling by high throughput sequencing
+Experimental Design Term Source REF		EFO
+Public Release Date	2009-06-15
+Experiment Description	Whole genome re-sequencing is still a costly method to detect genetic mutations that lead to altered forms of proteins and may be associated with disease development. Since the majority of disease-related single nucleotide variations (SNVs) are found in protein-coding regions, we propose to identify SNVs in expressed exons of the human genome using the recently developed RNA-Seq technique. We identify 12,176 and 10,621 SNVs, respectively, in Jurkat T cells and CD4+ T cells from a healthy donor. Interestingly, our data show that one copy of the TAL-1 protooncogene has a point mutation in 3’ UTR and only the mutant allele is expressed in Jurkat cells. We provide a comprehensive dataset for further understanding the cancer biology of Jurkat cells. Our results indicate that this is a cost-effective and efficient strategy to systematically identify SNVs in the expressed regions of the human genome. RNA-Seq experiments for two samples: CD4+ T cells from a healthy donor and Jurkat T cells. There are 8 lanes of data for each sample.				
+Date of Experiment					
+Term Source Name	EFO	
+Term Source Version					
+Term Source File	http://efo.svn.sourceforge.net/viewvc/efo/trunk/src/efoinowl/efo.owl				
+Person Last Name	Chepelev	Chepelev	Wei	Tang	Zhao
+Person First Name	Iouri	Iouri	Gang	Qiangsong	Keji
+Person Mid Initials					
+Person Email	chepelevi@mail.nih.gov				
+Person Affiliation	NHLBI/NIH				
+Person Phone	301-402-8533				
+Person Fax	301-402-0971				
+Person Address	NHLBI/NIH, Building 10, Room 7B20A, 9000 Rockville Pike, Bethesda, MD, USA				
+Person Roles	submitter				
+Person Roles Term Source REF					
+Person Roles Term Accession Number					
+Normalization Type					
+Normalization Term Accession Number					
+Normalization Term Source REF					
+Replicate Type					
+Replicate Term Accession Number					
+Replicate Term Source REF					
+Quality Control Type					
+Quality Control Term Accession Number					
+Quality Control Term Source REF					
+Protocol Name	P-GSE16190-1	P-GSE16190-3	P-GSE16190-2	P-GSE16190-4	
+Protocol Description	n/a	polyA RNA purified from total RNA	n/a	Illumina Genome Analyzer Pipeline version 1.0 produced an output containing sequences in seq and prb formats. First 30 bases of sequences were matched to both the hg18 human genome and a library of (26+26)-bp exon junction sequences using ELAND. Exons sequences were retrieved from Ensembl database (version 50).	
+Protocol Software					
+Protocol Hardware					
+Protocol Contact					
+Protocol Type	specified_biomaterial_action	nucleic_acid_extraction	grow	feature_extraction	
+Protocol Term Source REF					
+Protocol Term Accession Number					
+Experimental Factor Name	CELL TYPE				
+Experimental Factor Type	cell type				
+Experimental Factor Term Source REF					
+Experimental Factor Term Accession Number					
+Comment[SecondaryAccession]	GSE16190	SRP000823			
+Comment[GEOLastUpdateDate]	2010-01-27
+Comment[GEOReleaseDate]	2009-06-14
+Comment[SequenceDataURI]	http://www.ebi.ac.uk/ena/data/view/SRR017233-SRR017248				
+Comment[ArrayExpressSubmissionDate]	2009-05-20
+SDRF File	E-GEOD-16190.sdrf.txt
