@@ -29,7 +29,10 @@
     No output.
 }
 \seealso{
-    \code{\link{getPipelineOption}}, \code{\link{getPipelineOptions}}, \code{\link{setPipelineOptions}}, \code{\link{ArrayExpressHTS}}}
+    \code{\link{getPipelineOption}}, 
+    \code{\link{getPipelineOptions}}, 
+    \code{\link{setPipelineOptions}}, 
+    \code{\link{ArrayExpressHTS}}}
 \author{
     Andrew Tikhonov <andrew@ebi.ac.uk>, Angela Goncalves <angela.goncalves@ebi.ac.uk>
 }

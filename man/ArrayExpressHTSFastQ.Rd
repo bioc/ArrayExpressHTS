@@ -83,7 +83,8 @@ if (isRCloud()) { # disabled on local configs so as not to kill package building
     # set usercloud = FALSE if executing on local PC, 
     # therefore parallel computation will be disabled
     #
-    aehts = ArrayExpressHTSFastQ(accession = "testExperiment", organism = "Homo_sappiens", dir = dstfolder);
+    aehts = ArrayExpressHTSFastQ(accession = "testExperiment", 
+        organism = "Homo_sappiens", dir = dstfolder);
         
     # load the expression set object
     loadednames = load(paste(dstfolder, "/testExperiment/eset_notstd_rpkm.RData", sep=""));

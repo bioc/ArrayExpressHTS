@@ -15,7 +15,10 @@
     The result is the value of the option.
 }
 \seealso{
-    \code{\link{getPipelineOptions}}, \code{\link{setPipelineOptions}}, \code{\link{initDefaultEnvironment}}, \code{\link{ArrayExpressHTS}}}
+    \code{\link{getPipelineOptions}}, 
+    \code{\link{setPipelineOptions}}, 
+    \code{\link{initDefaultEnvironment}}, 
+    \code{\link{ArrayExpressHTS}}}
 \author{
     
     Andrew Tikhonov <andrew@ebi.ac.uk>, Angela Goncalves <angela.goncalves@ebi.ac.uk>

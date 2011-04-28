@@ -310,6 +310,25 @@ pileup_to_dataframe <- function( update = FALSE ) {
     return( pile )
 }
 
+
+# get fastq quality
+get_fastq_quality <- function( fname ) {
+    trace.enter("get_fastq_quality");
+    on.exit({ trace.exit() })
+    
+    splitarr = unlist(strsplit(fname, '/'));
+    name = splitarr[length(splitarr)]
+    
+    outfname = paste(tempdir(), "/", name, ".tmp", sep = "");
+    
+    writeLines( readLines(fname, n = 8), file(outfname) )
+    
+    seq = readFastq(outfname)
+    
+    return(class(quality(seq))[1]);
+}
+
+
 # read fastq files 
 # the fastq format defines:
 # 1st line: @id:lane:tile:x:y#multiplexIndex/paired-endNumber(1|2)

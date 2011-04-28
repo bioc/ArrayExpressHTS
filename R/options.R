@@ -9,8 +9,8 @@ initPipelineOptions <- function() {
 
     options <- list(
         aligner       = "tophat",
-        trace         = "disabled",
-        memorymonitor = "disabled",
+        trace         = "enabled",
+        memorymonitor = "enabled",
         ebilocalmode  = FALSE,
         cufflinks = "/ebi/microarray/home/biocep/local/tools/cufflinks-0.8.2.Linux_x86_64",
         samtools  = "/ebi/microarray/home/biocep/local/tools/samtools-0.1.8",

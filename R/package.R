@@ -22,8 +22,12 @@ ArrayExpressHTS <- function( accession, usercloud = TRUE, options=getAEDefaultOp
     
     log.info("creating projects");
     
+    resetProjectErrors();
+    
     # create projects
     projects <- createAEprojects( accession=accession, dir=dir, refdir=refdir, localmode=getPipelineOption("ebilocalmode"), options=options );
+    
+    checkProjectErrors();
     
     if (length(projects) > 0) { 
         attr(projects, 'metadata')$logfolder = paste(dir, accession, 'cluster-log', sep='/');
@@ -56,10 +60,17 @@ ArrayExpressHTSFastQ <- function( accession, organism, usercloud = TRUE, options
     # memory usage
     print.memory.usage("Master Memory Usage: Start")
     
-    log.info( "creating projects" );  
+    log.info( "creating projects" );
+    
+    resetProjectErrors();
+        
     # create projects
     projects <- createFastQProjects( accession=accession, organism=organism, dir=dir, refdir=refdir, options=options )
+    
+    checkProjectErrors();
+    
     if (length(projects) > 0) {
+    
         attr(projects, 'metadata')$logfolder = paste(dir, accession, 'cluster-log', sep='/');
         
         assignProjects(projects);
@@ -82,6 +93,35 @@ ArrayExpressHTSFastQ <- function( accession, organism, usercloud = TRUE, options
     log.info( "Computation Completed" );
 
     return(ecount);
+}
+
+resetProjectErrors <- function(){
+    
+    # reset missing fastq files
+    setPackageVariable("missing-fastq" = FALSE);
+    
+    # add more as necessary
+    # ...
+    #
+    #
+}
+
+
+checkProjectErrors <- function(){
+    
+    # check missing fastq files
+    #
+    missingfastq = getPackageVariable("missing-fastq")
+    
+    if (!is.null(missingfastq) && missingfastq == TRUE) {
+        log.info("ERROR One or more Fastq files are missing!")
+        stop();
+    }
+    
+    # add more as necessary
+    # ...
+    #
+    #
 }
 
 assignProjects <- function(projects){
@@ -340,48 +380,45 @@ processOneProject <- function(project, projects, want.reports) {
     
     log.info( "processing ", .project$name );
     
-    #assignInNamespace('.HTML.file', 
-    #    file.path( .project$report["raw_report_dir"], "plotRawReport.html" ), ns="ArrayExpressHTS");
-    
     # memory usage
     print.memory.usage("Memory: processOneProject step 1")
     
-    seq = try( fastq_to_shortreadq() )
-    if (inherits(seq, "try-error")) { 
-        log.info(" Error reading data file");
-        return();
-    }
-    
-    # memory usage
-    print.memory.usage("Memory: processOneProject step 2")
-    
-    tab = try( shortread_to_tab( seq ) );
-    if (inherits(tab, "try-error")) { 
-        log.info(" Error converting data file");
-        return();
-    }
-    
-    .project$qual_type = class(quality( seq [[1]] )[1])[1]
+    #.project$qual_type = class(quality( seq [[1]] )[1])[1]
     
     # memory usage
     print.memory.usage("Memory: processOneProject step 3")
     
     if (want.reports) {
+        
+        seq = try( fastq_to_shortreadq() )
+        if (inherits(seq, "try-error")) { 
+            log.info(" Error reading data file");
+            return();
+        }
+        
+        # memory usage
+        print.memory.usage("Memory: processOneProject step 2")
+        
+        tab = try( shortread_to_tab( seq ) );
+        if (inherits(tab, "try-error")) { 
+            log.info(" Error converting data file");
+            return();
+        }
+        
+        # memory usage
+        print.memory.usage("Memory: processOneProject step 3")
+        
         # make sure there's at least one device there
         #
-        #if (length(dev.list()) == 0) {
-            #    pdf( file= paste(.project$projectdir, "/", .project$name, ".backup.device.pdf", sep="") );
-        #}
-        
         plottingresult = try( plot_raw_report( seq, tab ) )
         if (inherits(plottingresult, "try-error")) { 
             log.info(" Error plotting raw report");
             # continue even if it fails
         }
-    }
     
-    # memory usage
-    print.memory.usage("Memory: processOneProject step 4")
+        # memory usage
+        print.memory.usage("Memory: processOneProject step 4")
+    }
     
     alignmentresult = try( align( sure.i.want.to.run.this = TRUE ) )
     if (inherits(alignmentresult, "try-error")) { 
@@ -416,16 +453,16 @@ processOneProject <- function(project, projects, want.reports) {
             log.info(" Error plotting alignment report");
             # continue
         }
+    
+        # memory usage
+        print.memory.usage("Memory: processOneProject step 7")
+    
+        #rm(bam);
+        rm(seq);
+    
+        # memory usage
+        print.memory.usage("Memory: processOneProject step 8")
     }
-    
-    # memory usage
-    print.memory.usage("Memory: processOneProject step 7")
-    
-    #rm(bam);
-    rm(seq);
-    
-    # memory usage
-    print.memory.usage("Memory: processOneProject step 8")
     
     # call it here to pre-cache 
     # when we're still in parallel

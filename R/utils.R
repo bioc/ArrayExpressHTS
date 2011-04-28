@@ -137,8 +137,9 @@ verify_fqfiles <- function( files ) {
     on.exit({ trace.exit() })
     
     if( length(files) == 0 ) {
-        log.info( "ERROR Couldn't find fastq files!" );
-        stop();
+        log.info( "ERROR No FastQ files found! " );
+        setPackageVariable("missing-fastq" = TRUE);
+        #stop();
         #return( NULL )
     }
     fl = files[grep( "_1\\.", files )]
@@ -245,14 +246,17 @@ getEnsemblReference <- function( organism, type, version, location, run = FALSE,
     
     if( version != "current" ) {
         release_ver = getMatchedText("\\d*$", version);
-        ref_subver = paste( "release-", release_ver, sep="")
+        ref_subver = 
+        # pub/release-62/fasta/
+        ref_subverpath = paste( "release-", release_ver, "/fasta/", sep="")
         
     } else {
-        ref_subver = version
+        #"ftp://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/"        
+        ref_subverpath = paste( "current_fasta/", sep="")
     }
     
     ensembl_path = paste("ftp://ftp.ensembl.org/pub/", 
-        ref_subver, "/fasta/", tolower(organism), "/", ty, sep="");
+        ref_subverpath, tolower(organism), "/", ty, sep="");
     
     # create dir for all references
     if( !file.exists(reference_dir) ) {
@@ -332,21 +336,21 @@ getEnsemblAnnotation <- function( organism, version, location, run = FALSE, refr
     trace.enter("getEnsemblAnnotation");
     on.exit({ trace.exit() })
     
-    #ftp://ftp.ensembl.org/pub/current_gtf/homo_sapiens/Homo_sapiens.GRCh37.61.gtf.gz
-    #ftp://ftp.ensembl.org/pub/current/gtf/homo_sapiens/Homo_sapiens.GRCh37.61.gtf.gz
-    #ftp://ftp.ensembl.org/pub/release-61/gtf/homo_sapiens/Homo_sapiens.GRCh37.61.gtf.gz
-    
     reference_dir = paste(location, "/annotation", sep="");
+    
     
     if( version != "current" ) {
         release_ver = getMatchedText("\\d*$", version);
-        ref_subver = paste( "release-", release_ver, sep="")
+        ref_subver = 
+        # pub/release-62/gtf/
+        ref_subverpath = paste( "release-", release_ver, "/gtf/", sep="")
         
     } else {
-        ref_subver = version
+        #"ftp://ftp.ensembl.org/pub/current_gtf/homo_sapiens/"
+        ref_subverpath = paste( "current_gtf/", sep="")
     }
     
-    ensembl_path = paste("ftp://ftp.ensembl.org/pub/", ref_subver, "/gtf/", tolower(organism), sep="");
+    ensembl_path = paste("ftp://ftp.ensembl.org/pub/", ref_subverpath, tolower(organism), sep="");
     
     cmds = c();
     

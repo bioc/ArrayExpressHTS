@@ -127,7 +127,8 @@ initDefaultProject <- function() {
     p0;
 }
 
-createDefaultProject <- function(projname, project0) {
+createDefaultProject <- function(projname, organism, project0) {
+
     trace.enter("createDefaultProject");
     on.exit({ trace.exit() })
     
@@ -138,6 +139,10 @@ createDefaultProject <- function(projname, project0) {
     project$name = projname;
     
     project$projectdir = paste(project$basedir, projname, sep="/")
+    
+    project$organism = organism;
+    
+    project$reference$version = getCurrentRefVersion( organism, project0$refdir );
     
     #project$projectdir = projname;
     
@@ -159,6 +164,10 @@ createDefaultProject <- function(projname, project0) {
     for( rdir in project$report ) {
         dir.create( rdir, showWarnings = FALSE );
     }
+    
+    # read in quality from the fastq file
+    #
+    project$qual_type = get_fastq_quality( project$fq_files[1] )
     
     return(project);
     
@@ -350,12 +359,12 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
             #
             project0 = initDefaultProject();
             
-            # init organism
+            # init default project
             #
-            project0$organism = organism;
             project0$basedir = basedir;
             project0$datadir = datadir;
             project0$refdir = refdir;
+            project0$organism = organism;
             project0$enaexpid = expidnames[i];
             
             project0 = setUserOptions( project0, options );
@@ -368,7 +377,7 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
                 
                 if (!(projname %in% projectnames)) {
                     
-                    projects[[projname]] = createDefaultProject(projname, project0);
+                    projects[[projname]] = createDefaultProject(projname, organism, project0);
                     
                     projectnames = c(projectnames, projname);
                     
@@ -494,55 +503,98 @@ createFastQProjects <- function( accession, organism, options=getAEDefaultOption
         stop();
     }
     
+    # create projects
+    #
+    projectnames = c();
+    organismnames = c();
+    baselengths = c();
+    
     # load supported organisms
     scanSupportedOrganisms( refdir );    
     
     # read SDRF
     # Parse sdrf and create a list with a project per lane
-    sdrffilename = dir( datadir, pattern="sdrf", full.names = TRUE )[1]
-    
-    # create projects
-    #
-    projectnames = c();
-    organismnames = c();
+    sdrffilename = dir( datadir, pattern="sdrf", full.names = TRUE )
     
     if( length(sdrffilename) > 0 ) {
     
-        sdrf = readSDRF( sdrffilename )
+        sdrf = readSDRF( sdrffilename[1] )
         
-        # try getting names from Array.Data.File
+        index1 = grep("Array.Data.File", names(sdrf@data)) # direct submission, array-based format
+        index2 = grep("ENA_RUN", names(sdrf@data))         # AE-ENA experiment format
+        index3 = grep("Sample", names(sdrf@data))          # manual sdrf format
+        
+        # direct submission, array-based sdrf format
         #
-        ind = regexpr( "_[12].f", sdrf@data$Array.Data.File ) # files have to has extension starting with 'f'
+        if (length(index1) > 0) {
+            # try getting names from Array.Data.File
+            #
+            ind = regexpr( "_[12].f", sdrf@data$Array.Data.File ) # files have to has extension starting with 'f'
         
-        if (length(ind) > 0) {
-            ind = sapply( 1:length(ind), function(x) { 
-                if(ind[x] < 0) 
-                regexpr( ".f", sdrf@data$Array.Data.File[x], fixed = TRUE) 
-            else ind[x] } )
-            
-            for( i in 1:length(ind) ) {
-                projectnames = c( projectnames, substr( sdrf@data$Array.Data.File[i], 1, ind[i]-1 ) )
+            if (length(ind) > 0) {
+                ind = sapply( 1:length(ind), function(x) { 
+                    if(ind[x] < 0) 
+                    regexpr( ".f", sdrf@data$Array.Data.File[x], fixed = TRUE) 
+                else ind[x] } )
+                
+                for( i in 1:length(ind) ) {
+                    projectnames = c( projectnames, substr( sdrf@data$Array.Data.File[i], 1, ind[i]-1 ) )
+                }
+                
+                projectnames = unique( projectnames )
+                
+                for( name in projectnames ) {
+                    organismnames = c(organismnames, sub( " ", "_", 
+                    sdrf@data$Characteristics.Organism.[grep( name, sdrf@data$Array.Data.File )[1]] ));
+                }
             }
-            
-            projectnames = unique( projectnames )
-            
-            for( name in projectnames ) {
-                organismnames = c(organismnames, sub( " ", "_", 
-                sdrf@data$Characteristics.Organism.[grep( name, sdrf@data$Array.Data.File )[1]] ));
-            }
-            
-        } else {
+        }
+        
+        # AE-ENA experiment sdrf format
+        #
+        if (length(index2) > 0) {
             # get names from ENA_RUN
             
-            index = grep("ENA_RUN", names(sdrf@data))
-            projectnames = sdrf@data[[index]]
-            
+            projectnames = sdrf@data[[index2]]
             projectnames = unique( projectnames )
             
             for( name in projectnames ) {
                 organismnames = c(organismnames, sub( " ", "_", 
-                sdrf@data$Characteristics.Organism.[grep( name, sdrf@data[[index]] )[1]] ));
+                sdrf@data$Characteristics.Organism.[grep( name, sdrf@data[[index2]] )[1]] ));
             }
+        }
+        
+            
+        # manual sdrf format
+        #
+        # "Sample" "Organism"     "Base.Length"
+        #  1286     Homo sapiens   150
+        #  1287     Homo sapiens   150
+        if (length(index3) > 0) {
+            
+            projectnames = sdrf@data[[index3]]
+            #projectnames = unique( projectnames )
+            
+            i0 = grep("Organism", names(sdrf@data))
+            
+            if (length(i0 > 0)) {
+                # read organisms
+                #
+                organismnames = sub( " ", "_", sdrf@data[[i0]] )
+            } else {
+                # duplicate master organism
+                #
+                organismnames = sub( " ", "_", rep(organism, length(projectnames)))
+            }
+
+            i1 = grep("Base.Length", names(sdrf@data))
+            
+            if (length(i1 > 0)) {
+                # read real lengths
+                #
+                baselengths = sdrf@data[[i1]];
+            }
+
         }
         
         if (length(projectnames) == 0) {
@@ -587,66 +639,52 @@ createFastQProjects <- function( accession, organism, options=getAEDefaultOption
     }
 
     
-    project0 = initDefaultProject()
+    project0 = initDefaultProject();
+    
+    # init default project
+    #
+    project0$basedir = basedir;
+    project0$datadir = datadir;
+    project0$refdir = refdir;
+    
+    project0 = setUserOptions( project0, options );
     
     for( i in 1:length(projectnames) ) {
         
-        log.info("Creating project: ", projectnames[i]);
+        projname = projectnames[i];
         
-        project = project0;
+        projects[[ projname ]] = createDefaultProject(projname, organismnames[i], project0);
         
-        project$name = projectnames[i];
-        project$organism = organismnames[i];
-        project$basedir = basedir;
-        project$datadir = datadir;
-        project$refdir = refdir;
-        project$projectdir = paste(basedir, "/", projectnames[i], sep="")
-        
-        project = setUserOptions( project, options );
-        
-        dir.create(project$projectdir, showWarnings = FALSE)
-        
-        project$aligner$out_dir = paste( project$projectdir, "/", project$aligner$type, "_out", sep="" );
-        
-        log.info( "\tCreating new aligner output dir '", project$aligner$out_dir, "'" );
-        dir.create( project$aligner$out_dir );
-        
-        # output_dirs = dir( project$projectdir, pattern = paste(project$aligner$type, "_out", sep=""), full.names = TRUE );
-        # if( length(output_dirs) > 0 ) {
-        #     validp = sapply( output_dirs, function(x) { optionsfile = paste(x, "/project_options.RData", sep="");
-        #         if(!file.exists(optionsfile)) { FALSE } 
-        #         else { load(optionsfile); compareProjects( project, oldopt ) } } );
-        #     if( any(validp) ) {
-        #         log.info( "\tOutput dir ", output_dirs[validp][1], 
-        #                 " with the same options already exist" )
-        #         project$aligner$out_dir = output_dirs[validp][1];
-        #     } else {
-        #         project$aligner$out_dir = paste( project$aligner$out_dir, "_", length(output_dirs)+1, sep="" );
-        #         log.info( paste("\tCreating new aligner output dir '", project$aligner$out_dir, "'...", sep="") );
-        #         dir.create( project$aligner$out_dir );
-        #     }
-        # } else {
-        #     log.info( "\tCreating new aligner output dir '", project$aligner$out_dir, "'" );
-        #     dir.create( project$aligner$out_dir );
-        # }
-        
-        project = fixedOptions( project );
-        
-        project$report = c(
-            raw_report_dir      = paste( project$projectdir, "/report", sep="" ),
-            aligned_report_dir  = paste( project$aligner$out_dir, "/report", sep=""),
-            compared_report_dir = paste( project$basedir, "/compare_report", sep="" ) );
-        
-        for( rdir in project$report ) {
-            dir.create( rdir, showWarnings = FALSE );
+        # check if paired end info 
+        # needs to be defined
+        #
+        if (!is.na(baselengths[i]) && projects[[ projname ]]$pairing$type == "PE") {
+            # get fastq filename
+            #
+            fqfilename = projects[[ projname ]]$fq_files[1];
+            
+            # get read length
+            #
+            readlength = getReadLength0( fqfilename );
+            
+            log.info( fqfilename, " Determined Read Length: ", readlength);
+            
+            # if user has not defined 
+            # the insert size using options
+            #
+            if(is.null(options$insize)) {
+                # update the insert size
+                #
+                projects[[ projname ]]$pairing$insize = baselengths[i] - readlength * 2;
+            }
+            
+            # if size deviation 
+            # 
+            if( is.null(options$insizedev) ) {
+                projects[[projname]]$pairing$insizedev = as.integer( 25 );
+            }
         }
-        
-        # oldopt = project;
-        # save( oldopt, file = paste( project$aligner$out_dir, "/project_options.RData", sep="" ) );
-        
-        projects[[ projectnames[i] ]] = project;
     }
-    ## setwd( basedir )
     
     metadata = list();
     
@@ -698,12 +736,12 @@ setUserOptions <- function( project, options ) {
         project$reference$type = options$reference
     }
     
-    if( is.null(options$reference_version) ) {
-        project$reference$version = getCurrentRefVersion( project )
-    } else {
-        # TODO: looks like a bug here, need to check
-        project$reference$version = options$reference_version[project$organism]
-    }
+    #if( is.null(options$reference_version) ) {
+    #    project$reference$version = getCurrentRefVersion( project )
+    #} else {
+    #    # TODO: looks like a bug here, need to check
+    #    project$reference$version = options$reference_version[project$organism]
+    #}
     
     if( is.null(options$aligner_options) ) {
         project$aligner$options = getAlignerDefaultOptions( project$aligner$type, project$reference$type );
@@ -818,6 +856,7 @@ fixedOptions <- function( project ) {
                                     organismversion, ".", reftype_to_filename( project$reference$type ), sep="" )
     
     project$annot$folder = paste( project$refdir, "/annotation/", organismversion, sep="" )
+    
     fail = download_annotation( project, run = TRUE )
     
     if( fail ) {
@@ -1051,22 +1090,27 @@ getSupportedOrganisms <- function( refdir ) {
 }
 
 # put here the latest indexed genome/transcriptome version available
-getCurrentRefVersion <- function( project ) {
+getCurrentRefVersion <- function( organism, refdir ) { # project
     trace.enter("getCurrentRefVersion");
     on.exit({ trace.exit() })
     
-    supportedVersions = getSupportedOrganisms( project$refdir );
-    version = supportedVersions[names(supportedVersions) %in% project$organism]
+    supportedVersions = getSupportedOrganisms( refdir );
+    version = supportedVersions[names(supportedVersions) %in% organism]
     
     if( length(version) == 0 ) {
-        log.info( "\tOrganism ", project$organism, " is not available on the filesystem." )
-        log.info( "\tTrying to download the latest version from Ensembl." )
-        version = prepareReference( project$organism, project$reference$type, 
-                "current", project$refdir, 
-                project$aligner$type, run = TRUE )
+        log.info( "\tOrganism ", organism, " is not available on the filesystem." )
+        log.info( "\tPlease use prepareReference and prepareAnnotation to get reference " )
+        log.info( "\tand annotation for ", organism );
+        
+        #version = prepareReference( project$organism, project$reference$type, 
+        #        "current", project$refdir, 
+        #        project$aligner$type, run = TRUE )
+        
+        stop();
+    
     } else {
         version = version[1]
-        log.info( "\tReference version not defined. Using the most recent available: ", version, "" )
+        log.info( "\tReference: ", version, "" )
     }
     
     #log.info( "\tUsing version ", version, " of the ", project$organism, 

@@ -7,7 +7,8 @@
     \code{prepareAnnotation} requires an Internet connection.
 }
 \usage{
-    prepareAnnotation(organism, version = "current", location = getDefaultReferenceDir(), refresh = FALSE, run = TRUE)
+    prepareAnnotation(organism, version = "current", 
+        location = getDefaultReferenceDir(), refresh = FALSE, run = TRUE)
 }
 \arguments{
     \item{organism}{ supported organism names can be viewed in the Ensemble database. Check 'ftp://ftp.ensembl.org/pub'. }
@@ -20,7 +21,10 @@
     The output is the version of the organism annotation that has been downloaded and processed.
     The annotation files are kept in the folder defined in \code{location} parameter.
 }
-    \seealso{\code{\link{ArrayExpressHTS}}, \code{\link{ArrayExpressHTSFastQ}}, \code{\link{prepareReference}}}
+\seealso{
+    \code{\link{ArrayExpressHTS}}, 
+    \code{\link{ArrayExpressHTSFastQ}}, 
+    \code{\link{prepareReference}}}
 \author{
     Andrew Tikhonov <andrew@ebi.ac.uk>, Angela Goncalves <angela.goncalves@ebi.ac.uk>
 }

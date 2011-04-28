@@ -1,4 +1,4 @@
-CHANGES IN VERSION 1.0.1
+CHANGES IN VERSION 1.1.4
 ------------------------
 
 NEW FEATURES
@@ -8,6 +8,14 @@ NEW FEATURES
     o reworked the discovery of reference data
 
     o updated the package after upgrading R and related packages on the EBI R-Cloud
+
+    o added more proper .sdrf descriptor for manual experiments
+
+    o added help pages for all external functions
+
+    o added examples as well as a test dataset
+
+    o optimized unnecessary memory usage when quality reports are not computed
 
 BUG FIXES
 

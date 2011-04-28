@@ -8,8 +8,11 @@
     \code{prepareReference} requires an Internet connection.
 }
 \usage{
-    prepareReference(organism, version = "current", type = c("genome", "transcriptome"), 
-    location = getDefaultReferenceDir(), aligner = c("bwa", "bowtie", "tophat"), refresh = FALSE, run = TRUE)
+    prepareReference(organism, version = "current", 
+        type = c("genome", "transcriptome"), 
+        location = getDefaultReferenceDir(), 
+        aligner = c("bwa", "bowtie", "tophat"), 
+        refresh = FALSE, run = TRUE)
 }
 \arguments{
     \item{organism}{ supported organism names can be viewed in the Ensemble database. Check 'ftp://ftp.ensembl.org/pub'. }
@@ -24,7 +27,10 @@
     The output is the version of the organism reference that has been downloaded and processed.
     The reference files are kept in the folder defined in \code{location} parameter.
 }
-    \seealso{\code{\link{ArrayExpressHTS}}, \code{\link{ArrayExpressHTSFastQ}}, \code{\link{prepareAnnotation}}}
+\seealso{
+    \code{\link{ArrayExpressHTS}}, 
+    \code{\link{ArrayExpressHTSFastQ}}, 
+    \code{\link{prepareAnnotation}}}
 \author{
     Andrew Tikhonov <andrew@ebi.ac.uk>, Angela Goncalves <angela.goncalves@ebi.ac.uk>
 }
@@ -53,10 +59,14 @@ if (isRCloud()) {
     dir.create(referencefolder)
     
     # download and prepare reference
-    prepareReference("Homo_sapiens", version = "GRCh37.61", type = "genome",        aligner = "bowtie", location = referencefolder )
-    prepareReference("Homo_sapiens", version = "GRCh37.61", type = "transcriptome", aligner = "bowtie", location = referencefolder )
-    prepareReference("Mus_musculus", version = "current",   type = "genome",        aligner = "bowtie", location = referencefolder )
-    prepareReference("Mus_musculus", version = "current",   type = "transcriptome", aligner = "bowtie", location = referencefolder )
+    prepareReference("Homo_sapiens", version = "GRCh37.61", 
+        type = "genome", aligner = "bowtie", location = referencefolder )
+    prepareReference("Homo_sapiens", version = "GRCh37.61", 
+        type = "transcriptome", aligner = "bowtie", location = referencefolder )
+    prepareReference("Mus_musculus", version = "current", 
+        type = "genome", aligner = "bowtie", location = referencefolder )
+    prepareReference("Mus_musculus", version = "current", 
+        type = "transcriptome", aligner = "bowtie", location = referencefolder )
 }
 
 }

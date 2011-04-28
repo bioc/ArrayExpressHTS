@@ -10,7 +10,11 @@
 \value{
     If TRUE, the configuration is the R-Cloud.
 }
-    \seealso{\code{\link{getPipelineOption}}, \code{\link{setPipelineOptions}}, \code{\link{initDefaultEnvironment}}, \code{\link{ArrayExpressHTS}}}
+\seealso{
+    \code{\link{getPipelineOption}}, 
+    \code{\link{setPipelineOptions}}, 
+    \code{\link{initDefaultEnvironment}}, 
+    \code{\link{ArrayExpressHTS}}}
 \author{
     Andrew Tikhonov <andrew@ebi.ac.uk>, Angela Goncalves <angela.goncalves@ebi.ac.uk>
 }
