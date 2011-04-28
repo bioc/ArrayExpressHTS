@@ -1,0 +1,29 @@
+CHANGES IN VERSION 1.1.4
+------------------------
+
+NEW FEATURES
+
+    o added prepareAnnotation and prepareReference functions
+
+    o reworked the discovery of reference data
+
+    o updated the package after upgrading R and related packages on the EBI R-Cloud
+
+    o added more proper .sdrf descriptor for manual experiments
+
+    o added help pages for all external functions
+
+    o added examples as well as a test dataset
+
+    o optimized unnecessary memory usage when quality reports are not computed
+
+BUG FIXES
+
+    o Fixed computation of insert size for paired end experiments
+
+    o Fixed fltbam tool that was not part of the pipeline and could not be invoked
+
+    o Fixed plot_scatter_samples calling to_expressionset with wrong argumenta
+
+    o Fixed problems with graphics after upgrade of R and graphics subsystem
+
