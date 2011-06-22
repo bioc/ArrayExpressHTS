@@ -8,19 +8,22 @@ defaultOptions <- NULL
 initPipelineOptions <- function() {
 
     options <- list(
-        aligner       = "tophat",
-        trace         = "enabled",
-        memorymonitor = "enabled",
-        ebilocalmode  = FALSE,
-        cufflinks = "/ebi/microarray/home/biocep/local/tools/cufflinks-0.8.2.Linux_x86_64",
-        samtools  = "/ebi/microarray/home/biocep/local/tools/samtools-0.1.8",
-        bwa       = "/ebi/microarray/home/biocep/local/tools/bwa-0.5.7",
-        mmseq     = "/ebi/microarray/home/biocep/local/tools/mmseq_0.9.8",
-        tophat    = "/ebi/microarray/home/biocep/local/tools/tophat-1.0.14.Linux_x86_64",
-        bowtie    = "/ebi/microarray/home/biocep/local/tools/bowtie-0.12.5",
-        fastx     = "/ebi/microarray/home/biocep/local/tools/fastx-toolkit-0.0.13",
-        referenceDir  = "/ebi/microarray/home/biocep/service/sequencing",
-        pathbackup    = Sys.getenv('PATH'));
+        aligner               = "tophat",
+        trace                 = "enabled",
+        memorymonitor         = "enabled",
+        ebilocalmode          = FALSE,
+        fastqreadmax          = 10000,
+        ignorequalityerrors   = FALSE,
+        defaultquality        = "FastqQuality",
+        cufflinks             = "/ebi/microarray/home/biocep/local/tools/cufflinks-0.8.2.Linux_x86_64",
+        samtools              = "/ebi/microarray/home/biocep/local/tools/samtools-0.1.8",
+        bwa                   = "/ebi/microarray/home/biocep/local/tools/bwa-0.5.7",
+        mmseq                 = "/ebi/microarray/home/biocep/local/tools/mmseq_0.9.8",
+        tophat                = "/ebi/microarray/home/biocep/local/tools/tophat-1.0.14.Linux_x86_64",
+        bowtie                = "/ebi/microarray/home/biocep/local/tools/bowtie-0.12.5",
+        fastx                 = "/ebi/microarray/home/biocep/local/tools/fastx-toolkit-0.0.13",
+        referenceDir          = "/ebi/microarray/home/biocep/service/sequencing",
+        pathbackup            = Sys.getenv('PATH'));
     
     assignInNamespace('defaultOptions', 
         addOptions(emptyenv(), options), ns="ArrayExpressHTS");

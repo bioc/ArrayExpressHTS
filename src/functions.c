@@ -38,8 +38,60 @@ void getReadLength(const char** infname , int* length) {
             }
         }
     }
+}
+
+#define UNDEF   -1
+#define PHRED33 33
+#define PHRED64 64
+#define SOLEXA  59
+
+void checkQuality(const char** infname , int* readmax, int* qualityscore) {  
+    char line[LINESIZE]; 
+    
+    FILE *infile;
+    
+    /* init to "undefined" */
+    qualityscore[0] = 0;
+    
+    int stop = 0; 
+    
+    if((infile = fopen(infname[0], "r")) == NULL) { 
+        printf("Error opening file %s\n", infname[0]); 
+        qualityscore[0] = UNDEF;
+        
+    } else {
+        qualityscore[0] = PHRED64;
+    
+        for(int i = 0;(i < readmax[0] && !stop); i++) {
+            /* printf("i=%d\n", i); */
+            
+            fgets(line, sizeof(line), infile); // read first line and discard it
+            fgets(line, sizeof(line), infile); // read second line
+            fgets(line, sizeof(line), infile); // read third line
+            fgets(line, sizeof(line), infile); // and forth line
+            
+            for (int j = 0; j < LINESIZE; j++) {
+                
+                if (line[j] == NEWLINE || line[j] == 0) {
+                    break;
+                }
+                
+                if (line[j] < SOLEXA) {
+                    qualityscore[0] = PHRED33;
+                    
+                    /* printf("detected %d at read %d\n", line[j], i); */
+                    
+                    stop = 1;
+                    break;
+                }
+            }
+        }
+        
+        fclose(infile); 
+    }
     
 }
+
 
 
 //void count_polyL( char **letter, int *len, char **seq, int *res ) {

@@ -73,6 +73,10 @@ makeAEIDFURL = function(accession) {
 }
 
 
+makeENAFastqFileName = function(fname) {
+    paste("fastq/", substr(fname, 1, 6), "/", substr(fname, 1, 9), "/", fname, sep="")
+}
+
 # read ENA experiment XML description
 # get links to fastQ and library settings 
 # for Paired-End experiments
@@ -105,6 +109,15 @@ readENADataForExpID = function(enaexpid) {
             
             if (l$XREF_LINK$DB == 'ERA-FASTQ') { ## ENA backward compatible field name
                 result$enafastq = unlist(strsplit(l$XREF_LINK$ID, ","));
+            
+            } else if (l$XREF_LINK$DB == 'ERA-FASTQ-FILES') { ## new interface
+                
+                descriptorurl = unlist(l$XREF_LINK$ID);
+                
+                descriptor = read.table(url(descriptorurl), header = TRUE, sep = "\t", 
+                    row.names = NULL, stringsAsFactors = FALSE, fill = TRUE)
+                
+                result$enafastq = makeENAFastqFileName(descriptor[['File.Name']]);
             }
         }
     } else {
@@ -300,6 +313,18 @@ getENAExpIDFromSDRF = function(sdrf) {
     return(NULL);
 }
 
+# strip off quotas
+#
+#
+stripOffQuotas = function(stringarray) {
+    for(i in 1:length(stringarray)) {
+        if (length(grep("\"", stringarray[i])) > 0) {
+            stringarray[i] = substring(stringarray[i], 2, nchar(stringarray[i]) -1);
+        }
+    }
+    return (stringarray);
+}
+
 # read organism from SDRF
 #
 #
@@ -310,7 +335,9 @@ getOrganismFromSDRF = function(sdrf) {
     if (!is.null(sdrf)) {
         index = grep("Characteristics.Organism", names(sdrf@data));
         if (length(index) > 0) {
-            return(sdrf@data[[ sort(names(sdrf@data)[index])[1] ]]);
+            
+            return( stripOffQuotas( sdrf@data[[ sort(names(sdrf@data)[index])[1] ]] ) );
+            
         }
     }
     

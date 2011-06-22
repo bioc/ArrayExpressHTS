@@ -1,29 +1,51 @@
-CHANGES IN VERSION 1.1.4
+
+CHANGES IN VERSION 1.3.1
+------------------------
+
+NEW FEATURES
+
+    o Added test dataset, which is a cut version of E-GEOD-16190 experiment
+    o Added normalization of the reference folder
+    o Added automatic fixing of reference .fai index, namely duplicated chromosome entries
+    o Added automatic detection of quality scale where possible
+    o Added and option to specify quality scale for custom experiments
+    o Performed performance and memory optimization
+    o Removed options$reference_version. Since the pipeline allows processing of 
+      multi-species datasets, a single version cannot fit into multiple organism 
+      paradigm. The pipeline always runs on the latest version of reference. 
+      Support for custom versions can be added upon request.
+    o Added memory monitoring
+
+BUG FIXES
+
+    o Fixes to accommodate changes in Ensembl interfaces, required for 
+      preparation of reference and annotation data.
+    o Fixes to accommodate changes in ENA interfaces, required for querying 
+      metadata  & downloading datasets for ArrayExpress experiments.
+    o Fixed examples in prepareReference help page
+    o Fixed ArrayExpressHTSFastQ scenario without .sdrf
+    o Fixed production of final alignment report
+
+
+CHANGES IN VERSION 1.3.0
+------------------------
+
+     o No changes. Version changed due to package propagation.
+
+
+CHANGES IN VERSION 1.0.1
 ------------------------
 
 NEW FEATURES
 
     o added prepareAnnotation and prepareReference functions
-
     o reworked the discovery of reference data
-
     o updated the package after upgrading R and related packages on the EBI R-Cloud
-
-    o added more proper .sdrf descriptor for manual experiments
-
-    o added help pages for all external functions
-
-    o added examples as well as a test dataset
-
-    o optimized unnecessary memory usage when quality reports are not computed
 
 BUG FIXES
 
     o Fixed computation of insert size for paired end experiments
-
     o Fixed fltbam tool that was not part of the pipeline and could not be invoked
-
     o Fixed plot_scatter_samples calling to_expressionset with wrong argumenta
-
     o Fixed problems with graphics after upgrade of R and graphics subsystem
 

@@ -169,7 +169,7 @@ reftype_to_filename <- function( type ) {
     trace.enter("reftype_to_filename");
     on.exit({ trace.exit() })
     
-    if( type == "genome" ) {
+    if( type == "genome" || type == "dna" ) {
         reference = "dna.chromosome"
     } else if( type == "transcriptome" ) {
         reference = "cdna.chromosome"
@@ -236,7 +236,7 @@ getEnsemblReference <- function( organism, type, version, location, run = FALSE,
     
     #owd = getwd()
     cmds = c()
-    if( type == "genome" ) {
+    if( type == "genome" || type == "dna" ) {
         ty = "dna"
     } else { 
         ty = "cdna"
@@ -386,7 +386,7 @@ getEnsemblAnnotation <- function( organism, version, location, run = FALSE, refr
     
     gtf_fullfilename = paste(reference_dir, "/", organism_ver, "/", gtf_filename, sep="");
     
-    log.info( "Looking for ", gtf_filename, "..." )
+    log.info( "Looking for ", gtf_filename, " ..." )
     
     if( file.exists(gtf_fullfilename) && file.exists(paste( gtf_fullfilename, ".out", sep="")) && !refresh ) {
         # do nothing
@@ -449,13 +449,56 @@ check_indexes <- function( run = FALSE ) {
         log.info( "\tindexes OK" )
 }
 
+
+checkReference <- function( fname ) {
+    
+    fai = read.table( fname, header = FALSE, stringsAsFactors = FALSE, fill = TRUE, 
+        row.names = NULL, blank.lines.skip = TRUE, sep="\t" );
+    
+    if (length( unique(fai[[1]]) ) != length( fai[[1]] )) {
+        log.info(fname, " Inconsistency Detected");
+    } else {
+        log.info(fname, " OK");
+    }
+}    
+
+
+fixReference <- function( fname ) {
+    # ".fa.fai"
+    
+    fai = read.table( fname, header = FALSE, stringsAsFactors = FALSE, fill = TRUE, 
+        row.names = NULL, blank.lines.skip = TRUE, sep="\t" );
+    
+    if (length( unique(fai[[1]]) ) != length( fai[[1]] )) {
+        
+        fnamebackup = paste(fname, ".backup", sep="")
+    
+        while (file.exists(fnamebackup)) {
+            fnamebackup = paste(fnamebackup, "~", sep = "");
+        }
+        
+        file.copy(fname, fnamebackup, overwrite = TRUE);
+    
+        fixedfai = fai[ match( unique(fai[[1]]), fai[[1]] ), ]
+        
+        write.table(fixedfai, fname, quote = FALSE, row.names = FALSE, col.names = FALSE, sep="\t" );
+        
+        
+        log.info(fname, "Fixed");
+    } else {
+        log.info(fname, "OK");
+    }
+    
+}
+
+
 indexReference <- function( organism, type, version, location, aligner, refresh = FALSE, run = TRUE ) {
     trace.enter("indexReference");
     on.exit({ trace.exit() })
     
     owd = getwd()
     cmds = c()
-    if( type == "genome" ) {
+    if( type == "genome" || type == "dna" ) {
         ty = "dna"
     } else { 
         ty = "cdna"
@@ -500,6 +543,17 @@ indexReference <- function( organism, type, version, location, aligner, refresh 
             cmds = c( cmds, paste( "ln -s tophat_indexes bowtie_indexes" ) )
             run_cmds( cmds, run )
             cmds = c()
+            
+            # fix double chromosome issue
+            #
+            faifname = paste(index_file, ".fai", sep="");
+            
+            if (file.exists(faifname)) {
+                fixReference( faifname );
+            } else {
+                log.info(faifname, " Not Found");
+            }
+            
             log.info( "Indexes saved to ", location )
         }
     } else if( aligner == "bwa" ) {
@@ -533,6 +587,17 @@ indexReference <- function( organism, type, version, location, aligner, refresh 
             cmds = c( cmds, paste( "ln ", location,  "/", gen_dir, "/", ref_dir, "/", filename, " .", sep="" ) )
             run_cmds( cmds, run )
             cmds = c()
+            
+            # fix double chromosome issue
+            #
+            faifname = paste(index_file, ".fai", sep="");
+            
+            if (file.exists(faifname)) {
+                fixReference( faifname );
+            } else {
+                log.info(faifname, " Not Found");
+            }
+            
             log.info( "Indexes saved to ", location )
         }
     } else {

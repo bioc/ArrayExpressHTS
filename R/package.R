@@ -17,6 +17,18 @@ ArrayExpressHTS <- function( accession, usercloud = TRUE, options=getAEDefaultOp
     trace.enter("ArrayExpressHTS"); 
     on.exit({ trace.exit() })
     
+    # merge user and default options
+    if (!missing(options)) {
+        options = mergeOptions(options, getAEDefaultOptions());
+    }
+    
+    if (!file.exists(refdir)) {
+        log.info(refdir, " Not Found.");
+        stop();
+    }
+    
+    refdir = normalizePath(refdir);
+    
     # memory usage
     print.memory.usage("Master Memory Usage: Start")
     
@@ -53,9 +65,27 @@ ArrayExpressHTS <- function( accession, usercloud = TRUE, options=getAEDefaultOp
     return(ecount);
 }
 
-ArrayExpressHTSFastQ <- function( accession, organism, usercloud = TRUE, options=getAEDefaultOptions(), nnodes = 10, pool = "32G", attempts = 4, dir = getwd(), refdir = getDefaultReferenceDir(), filter = TRUE, want.reports = TRUE ) {
+ArrayExpressHTSFastQ <- function( accession, organism, quality = c("auto", "FastqQuality", "SFastqQuality"), usercloud = TRUE, options=getAEDefaultOptions(), nnodes = 10, pool = "32G", attempts = 4, dir = getwd(), refdir = getDefaultReferenceDir(), filter = TRUE, want.reports = TRUE ) {
     trace.enter("ArrayExpressHTSFastQ");
     on.exit({ trace.exit() })
+    
+    # merge user and default options
+    if (!missing(options)) {
+        options = mergeOptions(options, getAEDefaultOptions());
+    }
+    
+    # set default quality
+    if (!missing(quality)) {
+        quality = "auto";
+    }
+    
+    if (!file.exists(refdir)) {
+        log.info(refdir, " Not Found.");
+        stop();
+    }
+    
+    refdir = normalizePath(refdir);
+    
     
     # memory usage
     print.memory.usage("Master Memory Usage: Start")
@@ -65,7 +95,7 @@ ArrayExpressHTSFastQ <- function( accession, organism, usercloud = TRUE, options
     resetProjectErrors();
         
     # create projects
-    projects <- createFastQProjects( accession=accession, organism=organism, dir=dir, refdir=refdir, options=options )
+    projects <- createFastQProjects( accession=accession, organism=organism, quality=quality, dir=dir, refdir=refdir, options=options )
     
     checkProjectErrors();
     
@@ -518,6 +548,13 @@ prepareReference <- function( organism, version = "current", type = c("genome", 
         stop();
     };
     
+    if (!file.exists(location)) {
+        log.info(location, " Not Found. Please create it.");
+        stop();
+    }
+    
+    location = normalizePath(location);
+    
     version = getEnsemblReference( organism = organism, type = type, 
         version = version, location = location, refresh = refresh, run = run)
     
@@ -532,6 +569,13 @@ prepareAnnotation <- function( organism, version = "current", location = getDefa
     
     trace.enter("prepareAnnotation");
     on.exit({ trace.exit() })
+    
+    if (!file.exists(location)) {
+        log.info(location, " Not Found. Please create it.");
+        stop();
+    }
+    
+    location = normalizePath(location);
     
     version = getEnsemblAnnotation( organism = organism, version = version, 
         location = location, refresh = refresh, run = run )

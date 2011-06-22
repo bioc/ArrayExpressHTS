@@ -165,10 +165,6 @@ createDefaultProject <- function(projname, organism, project0) {
         dir.create( rdir, showWarnings = FALSE );
     }
     
-    # read in quality from the fastq file
-    #
-    project$qual_type = get_fastq_quality( project$fq_files[1] )
-    
     return(project);
     
 }
@@ -377,7 +373,13 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
                 
                 if (!(projname %in% projectnames)) {
                     
-                    projects[[projname]] = createDefaultProject(projname, organism, project0);
+                    projects[[ projname ]] = createDefaultProject(projname, organism, project0);
+                    
+                    # quality scores from ENA are 
+                    # always Phred+33, which is "FastqQuality"
+                    #
+                    #
+                    projects[[ projname ]]$qual_type = "FastqQuality";
                     
                     projectnames = c(projectnames, projname);
                     
@@ -473,13 +475,12 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
 }
 
 
-createFastQProjects <- function( accession, organism, options=getAEDefaultOptions(), dir=getwd(), refdir=getDefaultReferenceDir() ) {
+createFastQProjects <- function( accession, organism, quality, options = getAEDefaultOptions(), dir = getwd(), refdir = getDefaultReferenceDir() ) {
     trace.enter("createFastQProjects");
     on.exit({ trace.exit() })
     
     # define projects
     projects = list()
-    
     
     # define folders
     basedir = paste( dir, accession, sep="/");
@@ -507,7 +508,7 @@ createFastQProjects <- function( accession, organism, options=getAEDefaultOption
     #
     projectnames = c();
     organismnames = c();
-    baselengths = c();
+    baselengths = c(NA);
     
     # load supported organisms
     scanSupportedOrganisms( refdir );    
@@ -524,9 +525,23 @@ createFastQProjects <- function( accession, organism, options=getAEDefaultOption
         index2 = grep("ENA_RUN", names(sdrf@data))         # AE-ENA experiment format
         index3 = grep("Sample", names(sdrf@data))          # manual sdrf format
         
+        # AE-ENA experiment sdrf format
+        #
+        if (length(index2) > 0 && length(projectnames) == 0) {
+            # get names from ENA_RUN
+            
+            projectnames = sdrf@data[[index2]]
+            projectnames = unique( projectnames )
+            
+            for( name in projectnames ) {
+                organismnames = c(organismnames, sub( " ", "_", 
+                sdrf@data$Characteristics.Organism.[grep( name, sdrf@data[[index2]] )[1]] ));
+            }
+        }
+        
         # direct submission, array-based sdrf format
         #
-        if (length(index1) > 0) {
+        if (length(index1) > 0 && length(projectnames) == 0) {
             # try getting names from Array.Data.File
             #
             ind = regexpr( "_[12].f", sdrf@data$Array.Data.File ) # files have to has extension starting with 'f'
@@ -550,27 +565,12 @@ createFastQProjects <- function( accession, organism, options=getAEDefaultOption
             }
         }
         
-        # AE-ENA experiment sdrf format
-        #
-        if (length(index2) > 0) {
-            # get names from ENA_RUN
-            
-            projectnames = sdrf@data[[index2]]
-            projectnames = unique( projectnames )
-            
-            for( name in projectnames ) {
-                organismnames = c(organismnames, sub( " ", "_", 
-                sdrf@data$Characteristics.Organism.[grep( name, sdrf@data[[index2]] )[1]] ));
-            }
-        }
-        
-            
         # manual sdrf format
         #
         # "Sample" "Organism"     "Base.Length"
         #  1286     Homo sapiens   150
         #  1287     Homo sapiens   150
-        if (length(index3) > 0) {
+        if (length(index3) > 0 && length(projectnames) == 0) {
             
             projectnames = sdrf@data[[index3]]
             #projectnames = unique( projectnames )
@@ -655,10 +655,19 @@ createFastQProjects <- function( accession, organism, options=getAEDefaultOption
         
         projects[[ projname ]] = createDefaultProject(projname, organismnames[i], project0);
         
+        if (quality == "auto") {
+            # detect quality
+            #
+            projects[[ projname ]]$qual_type = get_fastq_quality0( projects[[ projname ]]$fq_files[1] );
+        } else {
+            # set user selected quality
+            projects[[ projname ]]$qual_type = quality;
+        }
+        
         # check if paired end info 
         # needs to be defined
         #
-        if (!is.na(baselengths[i]) && projects[[ projname ]]$pairing$type == "PE") {
+        if (!is.null(baselengths[i]) && !is.na(baselengths[i]) && projects[[ projname ]]$pairing$type == "PE") {
             # get fastq filename
             #
             fqfilename = projects[[ projname ]]$fq_files[1];
@@ -683,6 +692,21 @@ createFastQProjects <- function( accession, organism, options=getAEDefaultOption
             if( is.null(options$insizedev) ) {
                 projects[[projname]]$pairing$insizedev = as.integer( 25 );
             }
+        }
+    }
+    
+    if (quality == "auto") {
+        
+        scales0 = unique(unlist(sapply(projects, function(x){ x$qual_type; })));
+    
+        if ( length(scales0) > 1 && options$aligner == "tophat" 
+                && !getPipelineOption("ignorequalityerrors") ) {
+            
+            log.info( "\tQuality scales of several fastq files are different. " );
+            log.info( "\tTry increasing the 'fastqreadmax' pipeline option, using " );
+            log.info( "\tgetPipelineOptions('fastqreadmax' = 100000), or disable" ); 
+            log.info( "\tquality errors using option 'ignorequalityerrors'." );
+            stop();
         }
     }
     
@@ -921,12 +945,32 @@ getAEDefaultOptions <- function() {
     trace.enter("getAEDefaultOptions");
     on.exit({ trace.exit() })
     
-    options=list( stranded = FALSE, insize=NULL, 
-    reference="genome", aligner="tophat", aligner_options=NULL, 
-    count_feature="transcript", count_options="", count_method=NULL,
-    filtering_options=NULL)
+    options=list( 
+        stranded              = FALSE, 
+        insize                = NULL, 
+        reference             = "genome", 
+        aligner               = "tophat", 
+        aligner_options       = NULL, 
+        count_feature         = "transcript", 
+        count_options         = "", 
+        count_method          = NULL, 
+        filtering_options     = NULL );
+      
+      #"FastqQuality"
     return( options )
 }
+
+mergeOptions <- function(baseoptions, newoptions) {
+    trace.enter("mergeOptions");
+    on.exit({ trace.exit() })
+    
+    for(n in names(newoptions)) {
+        baseoptions[[n]] = newoptions[[n]];
+    }
+    
+    return(baseoptions);
+}
+
 
 getFilteringDefaultOptions <- function() {
     trace.enter("getFilteringDefaultOptions");

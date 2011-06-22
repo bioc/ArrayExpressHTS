@@ -56,10 +56,20 @@ align_tophat <- function( run = FALSE ) {
                     options = paste( options, names(.project$aligner$options)[i], .project$aligner$options[[i]] )
             }
         }
+        
+        # default is phred33-quals
+        #
+        #--solexa-quals                          
+        #--solexa1.3-quals                          (same as phred64-quals)
+        #--phred64-quals                            (same as solexa1.3-quals)
+        
         if( .project$qual_type == "FastqQuality" ) {
-            options = paste( options, "--solexa-quals" )
+            # the tophat uses phred+33 by default,
+            # which is fine for FastqQuality type
+            #
+            #options = paste( options, "--solexa-quals" )
         } else {
-            options = paste( options, "--solexa1.3-quals" )
+            options = paste( options, "--phred64-quals" )
         }
     }
     if( .project$count$method == "mmseq" ) {
@@ -106,10 +116,22 @@ align_bowtie <- function( run = FALSE ) {
         options = .project$aligner$options
     } else {
         options = paste( "-p", .project$aligner$threads )        
+        
+        
+        #--phred33-quals    input quals are Phred+33 (default)
+        #--phred64-quals    input quals are Phred+64 (same as --solexa1.3-quals)
+        #--solexa-quals     input quals are from GA Pipeline ver. < 1.3
+        #--solexa1.3-quals  input quals are from GA Pipeline ver. >= 1.3
+        #--integer-quals    qualities are given as space-separated integers (not ASCII)
+        
         if( .project$qual_type == "FastqQuality" ) {
-            options = paste( options, "--solexa-quals" )
+            #
+            #
+            #options = paste( options, "--solexa-quals" )
+            options = paste( options, "--phred33-quals" )
         } else {
-            options = paste( options, "--solexa1.3-quals" )
+            #options = paste( options, "--solexa1.3-quals" )
+            options = paste( options, "--phred64-quals" )
         }
         
         # for working with mmseq
@@ -311,9 +333,38 @@ pileup_to_dataframe <- function( update = FALSE ) {
 }
 
 
+map_quality_scale0 <- function( num ) {
+    trace.enter("map_quality_scale0");
+    on.exit({ trace.exit() })
+    
+    if (num == 33) {
+        # sanger, phred+33
+        return("FastqQuality");
+    } else if (num == 64) {
+        # solexa, illumina 1.3, illumina 1.5, phred+64
+        return("SFastqQuality");
+    } else {
+        # default
+        return("FastqQuality");
+    }
+}
+
 # get fastq quality
-get_fastq_quality <- function( fname ) {
-    trace.enter("get_fastq_quality");
+get_fastq_quality0 <- function( fname ) {
+    trace.enter("get_fastq_quality0");
+    on.exit({ trace.exit() })
+    
+    readmax = getPipelineOption("fastqreadmax"); 
+    result = 0;
+    result0 = .C("checkQuality", as.character(fname), as.integer(readmax), as.integer(result))[[3]];
+    
+    return(map_quality_scale0(result0));
+}
+
+
+# get fastq quality
+get_fastq_quality_scale <- function( fname ) {
+    trace.enter("get_fastq_quality_scale");
     on.exit({ trace.exit() })
     
     splitarr = unlist(strsplit(fname, '/'));

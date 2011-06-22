@@ -8,16 +8,19 @@
     R object.
 }
 \usage{
-    ArrayExpressHTSFastQ(accession, organism, 
-        usercloud = TRUE, options=getAEDefaultOptions(), 
-        nnodes = 10, pool = "32G", attempts = 4, dir = getwd(), 
-        refdir = getDefaultReferenceDir(), filter = TRUE, 
-        want.reports = TRUE)
+    ArrayExpressHTSFastQ(accession, organism, quality = c("auto","FastqQuality", 
+        "SFastqQuality"), usercloud = TRUE, options = getAEDefaultOptions(), nnodes = 10, 
+        pool = "32G", attempts = 4, dir = getwd(), refdir = getDefaultReferenceDir(), 
+        filter = TRUE, want.reports = TRUE)
 }
 \arguments{
     \item{accession}{ name of the folder where experiment data is stored. Experiment description files .sdrf and .idf should be stored in this folder. 
         The actual data files should be stored in the 'data' that should be created in this folder. }
     \item{organism}{ this parameter is used to select appropriate alignment reference. }
+    \item{quality}{ this parameter is used to explicitly select the quality scale used in the fastq data files. 
+        By default "auto" is used. In case quality scale cannot be automatically detected, the user will be prompted 
+        to increase the detection depth or set the quality scale manually. "FastqQuality" corresponds to Phred+33,
+        "SFastqQuality" corresponds to Phred+64. }
     \item{usercloud}{ if TRUE, the R-Cloud will be used to schedule and compute the experiment 
     in parallel, otherwise the data files are computed sequentially. }
     \item{options}{ default options .}
@@ -84,7 +87,7 @@ if (isRCloud()) { # disabled on local configs so as not to kill package building
     # therefore parallel computation will be disabled
     #
     aehts = ArrayExpressHTSFastQ(accession = "testExperiment", 
-        organism = "Homo_sappiens", dir = dstfolder);
+        organism = "Homo_sapiens", dir = dstfolder);
         
     # load the expression set object
     loadednames = load(paste(dstfolder, "/testExperiment/eset_notstd_rpkm.RData", sep=""));
