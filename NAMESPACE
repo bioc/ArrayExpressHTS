@@ -29,11 +29,11 @@ importMethodsFrom(Rsamtools, ScanBamParam, scanBam, scanBamHeader)
 importMethodsFrom(ShortRead, FastqQuality, alphabetByCycle, dustyScore,
 id, readFastq, srFilter, tables)
 
-importFrom(Biobase, read.AnnotatedDataFrame)
+importFrom(Biobase, read.AnnotatedDataFrame, estimateSizeFactors)
 
 importFrom(Biostrings, BStringSet, DNAStringSet, fasta.info, readFASTA)
 
-importFrom(DESeq, estimateSizeFactors, estimateVarianceFunctions,
+importFrom(DESeq, estimateVarianceFunctions,
 nbinomTest, newCountDataSet)
 
 importFrom(GenomicRanges, GRanges)
