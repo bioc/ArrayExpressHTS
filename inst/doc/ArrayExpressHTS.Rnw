@@ -21,8 +21,15 @@
 \newcommand{\R}{\software{R}}
 \newcommand{\Rsamtools}{\Rpackage{Rsamtools}}
 \newcommand{\ArrayExpressHTS}{\Rpackage{ArrayExpressHTS}}
+\newcommand{\ArrayExpress}{\Rpackage{ArrayExpress}}
+\newcommand{\ArrayExpressArchive}{\Rpackage{ArrayExpress Archive}}
 \newcommand{\fastq}{\texttt{fastq}}
 \newcommand{\MAGETAB}{\texttt{MAGE-TAB}}
+\newcommand{\RCloud}{\textsf{R Cloud}}
+\newcommand{\RCloudWorkbench}{\textsf{R Cloud Workbench}}
+\newcommand{\Ensembl}{\texttt{Ensembl}}
+\newcommand{\SDRF}{\textsf{SDRF}}
+\newcommand{\IDF}{\textsf{IDF}}
 
 \clearpage
 
@@ -31,7 +38,7 @@
 \title{ An Introduction to \Rpackage{ArrayExpressHTS}: RNA-Seq Pipeline for transcription profiling experiments }
 
 \author{Andrew Tikhonov, Angela Goncalves}
-\date{Modified: 15 March, 2011. Compiled: \today}
+\date{Modified: 27 February, 2012. Compiled: \today}
 
 \maketitle
 
@@ -39,20 +46,23 @@
 %
 \section{ArrayExpressHTS Package}
 
-\ArrayExpressHTS{} is an R based pipeline for pre-processing, expression estimation and data quality assessment of high throughput 
-sequencing transcriptional profiling (RNA-seq) datasets. The pipeline starts from raw sequence files and produces standard 
-Bioconductor R objects containing transcript measurements for downstream analysis along with web reports for data quality assessment. 
-It may be run locally on a user's own computer or remotely on a distributed R-cloud farm at the European Bioinformatics Institute. 
-It can be used to analyse user's own datasets or public RNA-seq datasets from the ArrayExpress Archive.
+\ArrayExpressHTS{} is an R based pipeline for pre-processing, expression estimation and data 
+quality assessment of high throughput sequencing transcription profiling (RNA-seq) datasets. 
+The pipeline starts from raw sequence files and produces standard Bioconductor R objects containing 
+transcript expression measurements for downstream analysis along with web reports for data 
+quality assessment. It can be run locally on a user's own computer or remotely on a distributed 
+\RCloud{} farm at the European Bioinformatics Institute. It can be used to analyse user's own 
+datasets or public RNA-seq datasets from the \ArrayExpressArchive{}.
 
 \section{General Overview}
 
-The pipeline starts from raw sequence files and produces standard Bioconductor R objects of class \Rclass{ExpressionSet} 
-containing expression levels over features for downstream analysis, along with HTML reports for data quality assessment. 
-Further informative intermediate data, such as alignment and annotation files, are also available.
-The steps of the pipeline are:
+The pipeline accepts raw sequence files and produces Bioconductor R objects of class \Rclass{ExpressionSet} 
+containing expression levels over features and quality assessment reports in HTML format. Informative 
+intermediate data, such as alignment and annotation files, are also available.
+
+The steps the \ArrayExpressHTS{} pipeline performs to process data are:
 \begin{itemize}
-\item Prepare the data and experimental metadata
+\item Download the raw data and experimental metadata if necessary, prepare for processing
 \item Assess raw data quality and produce quality report
 \item Align sequencing data files to a reference
 \item Filter reads
@@ -60,228 +70,501 @@ The steps of the pipeline are:
 \item Estimate expression
 \item Generate a compared report 
 \end{itemize}
+%
+The steps a user needs to perform to run the pipeline:
+\begin{itemize}
+\item \ArrayExpressHTS{} package uses a number of external tools to process the sequencing data. On the \RCloud{} 
+the package is pre-configured and you don't need to setup and configure the tools. However if you're running the 
+pipeline on you desktop, the pipeline needs to be configured.
 
-\section{Running AEHTS on the EBI R-Cloud}
+\item Install external tools and configure the \ArrayExpressHTS{} package. On the \RCloud{} everything is installed
+and pre-configured, so you don't need to do anything for this step. However if you're running the pipeline on you 
+desktop, the tools needs to be installed and the pipeline needs to be configured.
 
-\subsection{Find a dataset to analyse or upload your own data}
+\item Prepare organism reference and annotation data. \RCloud{} provides preprocessed references and 
+annotations for most common organisms. References are taken from \Ensembl{} and are updated regularly. 
+If you are running the pipeline locally, or you don't find the organism in the prepared organisms list, you 
+will need to prepare reference and annotation data.
 
-\ArrayExpressHTS{} can be used on the EBI R-Cloud to analyse public and private datasets available through ArrayExpress. 
-You can use the web interface\footnote{http://www.ebi.ac.uk/arrayexpress/} to search for datasets in ArrayExpress.
+\item Launch the pipeline.
+\item Find and analyse reports and logs
+\end{itemize}
 %
+
+\subsection{ What data can be analysed }
+
+\begin{itemize}
+\item Public and private datasets available in \ArrayExpress{}. You can use the web 
+interface\footnote{http://www.ebi.ac.uk/arrayexpress/} to search for datasets in \ArrayExpress{}. The procedure of 
+getting one's data available for analysis from the \ArrayExpress{} is to submit it to the AE Archive, where the 
+data will remain password protected. Simple \MAGETAB{} templates for submission can be obtained 
+online\footnote{http://www.ebi.ac.uk/fg/submissions\_overview.html} and curators will assist in file 
+preparation and validation. This is available to both remote \RCloud{} and local configuration.
+
+\item Custom datasets uploaded to the \RCloud{} or custom datasets available locally on you desktop or a local host. 
+Uploading of data files can be performed using the means of the \RCloudWorkbench{}, the \RCloud{} GUI 
+client\footnote{http://www.ebi.ac.uk/tools/rcloud}. 
+\end{itemize}
 %
-The procedure of getting one's data available for analysis on the cloud is to submit it to the AE Archive, 
-where the data will remain password protected. Simple \MAGETAB{} templates for submission can be obtained 
-online\footnote{http://www.ebi.ac.uk/fg/submissions\_overview.html} and curators will assist in file preparation 
-and validation.
+
+\subsection{ Supported Configurations }
+
+\ArrayExpressHTS{} can run on:
+\begin{itemize}
+\item \RCloud{}, where, first -- pretty much everything related to configuration of tools and preparation of 
+reference and annotation data is taken care of. Second -- the EBI computation cluster, which allows massive 
+parallelization. \ArrayExpressHTS{} supports parallelization and, by using it, it is capable of producing results 
+tens and hundreds of times faster than a non-parallel configuration.
+
+\item Local configuration or a local host. The user needs to setup external tools and configure the package
+ to use them, prepare reference data and launch the pipeline the same way as in the \RCloud{}.
+\end{itemize}
 %
-\subsection{Launch the R-Cloud Workbench, register and create a new project}
-The \texttt{EBI R-Cloud} is a new service at the EBI which allows R users to log in and run distributed 
-computational jobs remotely on a powerful 64-bit linux cluster. The \texttt{R-Cloud} is available through 
-a GUI client, the \texttt{R-Cloud Workbench}. Follow the instructions 
-on the page\footnote{http://www.ebi.ac.uk/tools/rcloud} to download or launch the Workbench.
-%
-When connecting for the first time you will be requested to register. You will need to provide a username, 
-password and e-mail address to allow you to retrieve your long running projects the next time you log in. 
-Once registered you can log in and create a new project.
-%
+
+\section{ Running AEHTS on the R Cloud }
+
+The pipeline uses external tools and prepared (indexed) references and annotations. Please note that 
+when the \ArrayExpressHTS{} is used on the \RCloud{}, tool configuration and preparation of references is 
+taken care of behind the scenes.
+
+\subsection{Launch the R Cloud Workbench, register and create a new project}
+
+The \RCloud{} is a service at the EBI which allows R users to log in and run distributed 
+computational tasks remotely on a EBI 64-bit linux cluster. The \RCloud{} is available through 
+the \RCloudWorkbench{} or, alternatively, \texttt{R Cloud API} for programmatic access. Follow 
+the instructions on the page\footnote{http://www.ebi.ac.uk/tools/rcloud} to download or launch the 
+\RCloudWorkbench{}.
+
+The \RCloud{} requires registration. Open the registration panel in the \RCloudWorkbench{} and provide username, 
+password and email address to register. After registration is complete, you can log in and create a new project. 
+Please note that \RCloudWorkbench{} can disconnect from and connect to a project without interrupting the running 
+task. You can also shutdown the running server and start the project on a new fresh server if the need arises.
+
 To find your way around the workbench visit the documentation 
 online\footnote{http://www.ebi.ac.uk/Tools/rcloud/quick\_start.html}.
-%
-\subsection{Run the whole pipeline with default options }
-Running \ArrayExpressHTS{} within R with default options is straight forward with a call to 
-function \Rfunction{ArrayExpressHTS}. You must provide an ArrayExpress accession number for 
-the dataset you want to analyse. For example, the publicly available dataset \texttt{E-GEOD-16190} 
-comes from a study by Chepelev et al. on detecting single nucleotide variations in expressed exons 
-of the human genome. To re-analyse this data with default options run the following commands on t
-he Workbench console: 
 
-<<ArrayExpressHTS,eval=FALSE>>=
+\subsection{ References and annotations }
+
+References are the organism's genome or transcriptome the reads will be aligned to. For the alignment to function 
+properly the references need to be indexed (prepared). References and indexes need to be stored on the files system 
+along with the experiment data.
+
+EBI provides up-to-date \Ensembl{} references with prepared indexes for most commonly used organisms. The 
+pipeline automatically takes EBI references, unless it is explicitly specified to use a custom reference. 
+
+The pipeline can be specified to use a custom reference by setting the parameter \Rfunarg{refdir} in functions
+\Rfunction{ArrayExpressHTS} and \Rfunction{ArrayExpressHTSFastQ} to the folder where custom reference is located.
+
+If you don't find required reference in the EBI reference storage, and you know that it's available in 
+\Ensembl{}, you can use commands \Rfunction{prepareReference} and \Rfunction{prepareAnnotation} to 
+automatically download and prepare references and annotations from \Ensembl{}. Please note that annotation 
+is used throughout all steps of the pipeline and therefore needs to be prepared as well.
+
+To get a reference genome from \Ensembl{}, use \Rfunction{prepareReference}. The usage is as follows:
+
+<<prepareReference, eval=FALSE>>=
+
+# create directory
+#
+# Please note, tempdir() is used for automatic test 
+# execution. Select directory more appropriate and 
+# suitable for keeping reference data.
+#
+referencefolder = paste(tempdir(), "/reference", sep = "")
+
+dir.create(referencefolder)
+
+# download and prepare reference
+prepareReference("Homo_sapiens", version = "GRCh37.61", 
+        type = "genome", aligner = "bowtie", location = referencefolder )
+prepareReference("Homo_sapiens", version = "GRCh37.61", 
+        type = "transcriptome", aligner = "bowtie", location = referencefolder )
+prepareReference("Mus_musculus", version = "current", 
+        type = "genome", location = referencefolder )
+prepareReference("Mus_musculus", version = "current", 
+        type = "transcriptome", location = referencefolder )
+
+@
+%
+
+For the annotation:
+
+<<prepareAnnotation, eval=FALSE>>=
+
+# download and prepare annotation
+prepareAnnotation("Homo_sapiens", "current", location = referencefolder )
+prepareAnnotation("Mus_musculus", "NCBIM37.61", location = referencefolder )
+@
+%
+
+\subsection{ Custom references and annotations }
+
+There are currently no automatic means to prepare custom, non \Ensembl{} references.
+
+\subsection{ Process public ArrayExpress dataset }
+
+Running \ArrayExpressHTS{} for \ArrayExpress{} experiments is straight forward. Having started a new project, 
+load the package using \Rfunction{library(ArrayExpressHTS)} and start the pipeline by \Rfunction{ArrayExpressHTS} 
+command with an \ArrayExpress{} accession number as a parameter. For example, the publicly available dataset 
+\texttt{E-GEOD-16190} comes from a study by Chepelev et al. on detecting single nucleotide variations in expressed 
+exons of the human genome. To start the pipeline, run the following commands in the Workbench console: 
+
+<<ArrayExpressHTSRCloud, eval=FALSE>>=
 library("ArrayExpressHTS")
 aehts <- ArrayExpressHTS("E-GEOD-16190")
 @
-When the pipeline finishes, \Robject{e} will contain an \Rclass{ExpressionSet} object that can then be 
-used for further analysis.
 %
-Running the whole pipeline will take time depending on the size of the dataset and the amount of 
-computing nodes allocated for parallel computation. Reports and intermediate files are available as 
-soon as they are ready and can be visualised through the File Browsing tab. A directory will be automatically 
-created on your working space for each of the samples in the dataset. Any file can be copied by dragging and 
-dropping from the File Browser into, for example, your Desktop. Beware of the file size, which is generally 
-the reason why downloading takes long.
+
+A few notes:
+\begin{itemize}
+\item Running the entire pipeline sequence will take time. Normally, from half an hour to several hours. The 
+time depends on the size of the dataset, sizes of individual data files and the amount of parallel nodes in the 
+computational cluster.
+
+\item Experiment directory, e.g. \texttt{E-GEOD-16190}, will be automatically created in the working directory. 
+This directory will contain all computation results as well as intermediate files and quality reports.
+
+\item Quality reports are available as soon as they are produced and can be viewed using the Workbench File 
+Browser. If needed the report files can be drag'n'dropped from the Workbench File Browser to your local 
+computer.
+
+\item Cluster log files are available in  \texttt{cluster-log} folder. Logs are being collected throughout the 
+processing, however the output does not always appear immediately and can sometimes be slightly delayed. If needed 
+the log files can be drag'n'dropped from the Workbench File Browser to your desktop computer. Please mind the file 
+sizes.
+
+\end{itemize}
 %
+
+Results of the pipeline:
+
+\begin{itemize}
+\item When the pipeline finishes, \Robject{aehts} will contain an \Rclass{ExpressionSet} object that 
+encapsulates expression levels and experiment metadata. The object is also saved in the \texttt{E-GEOD-16190} 
+folder as \texttt{eset\_notstd\_rpkm.RData} and can be loaded as a usual R object via \Rfunction{load} command.
+
+\item Compared reports are available in the \texttt{compare\_report} folder in the main experiment folder.
+
+\item Reports related to single data files are located in the corresponding folders, e.g. 
+\texttt{SRR060747/report} and \texttt{SRR060747/tophat\_out/report}.
+
+\end{itemize}
+%
+
 To run the pipeline with options other than the default ones check the 'Configuration options' section.
 
+\subsection{ Prepare a custom dataset }
+
+The \ArrayExpressHTS package contains a packaged test experiment, which includes test \fastq{} files and metadata 
+that can be used as a sample custom dataset. Refer to the \Rfunction{ArrayExpressHTSFastQ} help page for commands 
+and instructions on how to extract the data from the package and create a custom experiment.
+
+Create an experiment directory with an arbitrary name and a subdirectory named \texttt{data} to contain your 
+raw read and metadata files.
+
+The structure should look like this:
+<<ArrayExpressHTSFolders, eval=FALSE>>=
+dir.create("testExperiment")
+dir.create("testExperiment/data")
+@
+%
+
+Upload \fastq{} data files into the \texttt{data} folder. If your data is paired, the pipeline will expect the 
+mates to be separated in two files with same names ending with \_1 and \_2, e.g.: 1974\_1.fastq and 1974\_2.fastq.
+
+Create experiment metadata \SDRF{} (Sample and Data Relationship Format) and \IDF{} (Investigation 
+Description Format) files according to \MAGETAB{}\footnote{http://tab2mage.sourceforge.net/docs/magetab\_docs.html} - 
+a TAB delimited format. The metadata serves to create a set of options to configure the analysis and build 
+the result \Rclass{ExpressionSet} object. The metadata includes:
+
+\begin{itemize}
+\item sample annotation, including the experimental factors and their values (e.g. sex of the sample, 
+        time in a time series experiment);
+\item biological system from which samples were taken, the organism and organism part (if known)
+\item experimental protocol information, such as the retaining of strand information and the insert size in 
+paired-end reads;
+\item experiment design information including the links between files and samples and their experimental factors;
+\item machine related information, such as the instrument used and the scale of the quality information. 
+\end{itemize}
+%
+
+For example you have 3 "Paired End" sequencing runs of "Homo sapiens", each run consists of a pair of mate
+files ending with \_1 and \_2. The files are:
+
+\begin{itemize}
+\item \emph{sampleHomo001\_1.fastq}
+\item \emph{sampleHomo001\_2.fastq}
+\item \emph{sampleHomo002\_1.fastq}
+\item \emph{sampleHomo002\_2.fastq}
+\item \emph{sampleHomo003\_1.fastq}
+\item \emph{sampleHomo003\_2.fastq}
+\end{itemize}
+%
+
+And 2 "Single Read" runs of "Mus musculus". The files are:
+
+\begin{itemize}
+\item \emph{sampleMus001.fastq}
+\item \emph{sampleMus002.fastq}
+\end{itemize}
+%
+
+In total 8 \fastq{} files in the \texttt{data} folder.
+
+Here are a few commands to construct an \SDRF{} for this experiment:
+<<constructSDRF, eval=FALSE>>=
+
+# "Sample"           "Organism"     "Base.Length"
+#  sampleHomo001     Homo sapiens     260
+#  sampleHomo002     Homo sapiens     260
+#  sampleHomo003     Homo sapiens     260
+#  sampleMus001      Mus musculus     0
+#  sampleMus002      Mus musculus     0
+
+
+dir.create("testExperiment")
+dir.create("testExperiment/data")
+
+mysdrf = data.frame(
+        "Sample" = c(
+                "sampleHomo001", 
+                "sampleHomo002", 
+                "sampleHomo003", 
+                "sampleMus001", 
+                "sampleMus002"), 
+        "Organism" = c(
+                "Homo sapiens", 
+                "Homo sapiens", 
+                "Homo sapiens", 
+                "Mus musculus", 
+                "Mus musculus"), 
+        "Base.Length" = c(
+                180, 180, 180, 
+                260, 260))
+
+write.table(mysdrf, 
+        file = "testExperiment/data/experiment.sdrf.txt", 
+        sep="\t", quote = FALSE, 
+        row.names = FALSE);
+@
+%
+
+Name metadata files as \texttt{<name of experiment>.idf.txt} and \texttt{<name of experiment>.sdrf.txt} and 
+place them into the \texttt{data} folder.
+
+\subsection{ Run the pipeline on a custom dataset }
+
+To launch the pipeline on a custom dataset use \Rfunction{ArrayExpressHTSFastQ} function. The function accepts 
+\Rfunarg{accession} parameter, which is the experiment folder name containing \texttt{data} folder. If you are using 
+custom reference, use \Rfunarg{refdir} parameter to specify the location of the reference.
+
+Below is an example experiment packaged in the \ArrayExpressHTS{}. The experiment is a very shortened version of 
+"E-GEOD-16190" experiment\footnote{http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-16190}.
+
+<<ArrayExpressHTSFastQRCloud, eval=FALSE>>=
+
+# In ArrayExpressHTS/expdata there is testExperiment, which is
+# a very short version of E-GEOD-16190 experiment, placed there 
+# for testing.
+#
+# Experiment in ArrayExpress:
+# http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-16190
+#
+# The following piece of code will take ~1.5 hours to compute
+# on local PC and ~10 minutes on R Cloud
+#
+# Create a temporary folder where experiment will be copied.
+# If experiment is computed in the package folder it may cause 
+# issues with file permissions and unwanted failures.
+# 
+#
+srcfolder <- system.file("expdata", "testExperiment", 
+        package="ArrayExpressHTS");
+
+dstfolder <- tempdir();
+
+file.copy(srcfolder, dstfolder, recursive = TRUE);
+
+# run the pipeline
+#
+aehts = ArrayExpressHTSFastQ(accession = "testExperiment", 
+        organism = "Homo_sapiens", dir = dstfolder);
+
+# load the expression set object
+loadednames = load(paste(dstfolder, 
+                "/testExperiment/eset_notstd_rpkm.RData", sep=""));
+loadednames;
+
+get('library')(Biobase);
+
+# print out the expression values
+#
+head(assayData(eset)$exprs);
+
+# print out the experiment meta data 
+experimentData(eset);
+pData(eset);
+
+# figure out if there's valuable data
+all(exprs(eset) == 0)
+
+# locate it
+head(which(exprs(eset) != 0))
+
+# print it
+exprs(eset)[ head(which(exprs(eset) != 0)) ]
+
+@
+%
+
+\section{ R Cloud configuration options }
+
+You can configure usage of the \RCloud{} in order to better control resources and execution flow. The options can 
+be defined by setting the \Rfunarg{rcloudoptions} parameter in \Rfunction{ArrayExpressHTS} and 
+\Rfunction{ArrayExpressHTSFastQ}.
+
+Example:
+<<ArrayExpressHTSWithRCloudOptions, eval=FALSE>>=
+library("ArrayExpressHTS")
+aehts <- ArrayExpressHTS("E-GEOD-16190", 
+        rcloudoptions = list(
+                "nnodes"   = "automatic", 
+                "pool"     = "16G", 
+                "nretries" = 10))
+@
+%
+
+The options are:
+\begin{itemize}
+\item \emph{nnodes}: 'automatic' or a numeric value. e.g. 10, controls the number of nodes 
+                    in the computational cluster. If a numeric values is defined rather than "automatic", the package 
+                    will allocate the specified amount, otherwise the amount will be calculated automatically.
+\item \emph{pool}: '4G', '8G', '16G', '32G', '64G', defines the server pool from which the nodes will be allocated.
+                    Each pool is limited memory-wise, which is signified by the values.
+\item \emph{nretries}: numeric value from 0 to 10, controls the number of retries if there is 
+                    not enough resources to immediately create a cluster.
+\end{itemize}
+%
 
 \section{ArrayExpressHTS Local Configuration}
-\subsection{Pre-requisites}
+
+\subsection{ Pre-requisites }
+
 In order to run the pipeline locally you will need do have at least:
 \begin{itemize}
 \item Unix based OS (linux, MacOS).
 \item R environment for statistical computing\footnote{http://www.r-project.org/}
-\item Bioconductor\footnote{http://www.bioconductor.org/install/index.html}
-	The following packges are required: \Rpackage{Rsamtools}, \Rpackage{IRanges}, \Rpackage{Biostrings}, \Rpackage{ShortRead}, \Rpackage{Hmisc}, \Rpackage{R2HTML}, \Rpackage{XML}, \Rpackage{Biobase}, \Rpackage{svMisc}, \Rpackage{sampling}, \Rpackage{xtable}, \Rpackage{DESeq}, \Rpackage{ArrayExpress}, \Rpackage{RColorBrewer}, \Rpackage{biomaRt}
+\item Bioconductor\footnote{http://www.bioconductor.org/install/index.html} packages: \Rpackage{Rsamtools}, 
+    \Rpackage{IRanges}, \Rpackage{Biostrings}, \Rpackage{ShortRead}, \Rpackage{Hmisc}, \Rpackage{R2HTML}, 
+    \Rpackage{XML}, \Rpackage{Biobase}, \Rpackage{svMisc}, \Rpackage{sampling}, \Rpackage{xtable}, 
+    \Rpackage{DESeq}, \Rpackage{RColorBrewer}, \Rpackage{biomaRt}
 \item SAMtools installed\footnote{http://samtools.sourceforge.net/}
 \item At least one aligner installed: BWA\footnote{http://bio-bwa.sourceforge.net/} and/or 
 Bowtie\footnote{http://bowtie-bio.sourceforge.net/tutorial.shtml} and/or TopHat\footnote{http://tophat.cbcb.umd.edu/}
 \item Cufflinks\footnote{http://cufflinks.cbcb.umd.edu/tutorial.html} and/or MMSEQ\footnote{http://www.bgx.org.uk/software/mmseq.html}
 \item \ArrayExpressHTS{} package installed.
 \end{itemize}
+%
 
-Check out 'Running AEHTS on the EBI R-Cloud' section to try out the pipeline on publicly available datasets 
+Check out 'Running AEHTS on the R Cloud' section to try out the pipeline on publicly available datasets 
 without having to install any of these. 
 
-\subsection{Process public ArrayExpress dataset}
-It is possible to run \ArrayExpressHTS{} on publicly available ArrayExpress data on your computer. It will 
-take longer as the data will be processed sequentially as opposed to R-Cloud where it's processed in parallel.
-However this possibillity provides a great benefit and can of course be of use.
+\subsection{ Configure ArrayExpressHTS to use external tools }
+\ArrayExpressHTS{} uses options e.g. \texttt{ArrayExpressHTS.cufflinks} to configure the paths to the external tools it uses. 
 
-You need to provide an ArrayExpress accession number for the dataset you want to analyse. For example, 
-the publicly available dataset \texttt{E-GEOD-16190} that was mentioned above by Chepelev et al. on 
-detecting single nucleotide variations in expressed exons of the human genome. To run the pipeline, execute
-the following R command:
+You can set them manually before you start the pipeline, or, alternatively, you can have these options set in an 
+.Rprofile file, which is loaded when you launch your local R. The values will be imported by the pipeline when the 
+\ArrayExpressHTS{} package is loaded.
 
-<<ArrayExpressHTS,eval=FALSE>>=
+<<configTools, eval=FALSE>>=
+
+# setup tools
+setPipelineOptions("ArrayExpressHTS.bowtie" 
+        = "/path/to/tools/bowtie-0.12.7")
+setPipelineOptions("ArrayExpressHTS.cufflinks" 
+        = "/path/to/tools/cufflinks-1.1.0.Linux_x86_64")
+setPipelineOptions("ArrayExpressHTS.tophat" 
+        = "/path/to/tools/tophat-1.3.2.Linux_x86_64")
+setPipelineOptions("ArrayExpressHTS.samtools" 
+        = "/path/to/tools/samtools-0.1.18")
+
+@
+%
+
+Please note the versions of the tools -- these versions are supported. Normally bioinformatics tools tend to change 
+their output format from time to time when a new version comes out. Usage of not supported versions is possible at 
+your own risk.   
+
+Also please note that normally, only a few of the tools are used. For the default setup - \software{tophat}, 
+\software{bowtie}, \software{cufflinks} and \software{samtools}. The other ones -- \software{bwa}, \software{mmseq}, 
+\software{bam2hits} are alternatives and can be left default if not used.
+
+\subsection{ References and annotations for local processing }
+
+For local configuration you would also need to prepare references. Please refer to 'References and annotations' and 
+'Custom references and annotations' sections above for instructions.
+
+
+\subsection{ Process public ArrayExpress dataset on your local computer }
+
+It is possible to process \ArrayExpress{} datasets on your computer. Please note, the local processing will be 
+sequential and therefore will take longer than on \RCloud{} where it's parallel. 
+
+The process of launching of the pipeline will be identical to the one described above in section 
+'Process public ArrayExpress dataset'. Provide an \ArrayExpress{} accession number, e.g. \texttt{E-GEOD-16190}, publicly 
+available dataset by Chepelev et al. mentioned above. To run the pipeline, execute the following R commands:
+
+<<ArrayExpressHTSLocal, eval=FALSE>>=
 library("ArrayExpressHTS")
 aehts <- ArrayExpressHTS("E-GEOD-16190", usercloud = FALSE)
 @
-The parameter 'usercloud' signals the pipeline that it is running in a non-parallel environment rather than 
-R-Cloud. When the pipeline finishes, \Robject{e} will contain an \Rclass{ExpressionSet} object that can then be
-used for further analysis.
+%
 
-\subsection{Prepare your own data}
-Users can process their owne datasets, that are non public, experimental or other. Data analysis starts with 
-obtaining the input raw read files and creation of corresponding experimental metadata. Create a directory 
-with the name you want to give your project and a subdirectory named 'data' on that project directory to hold 
-your raw read and metadata files.
+The parameter \Rfunarg{usercloud} sets the pipeline to a non \RCloud{} mode. When the pipeline finishes, \Robject{aehts} will 
+contain an \Rclass{ExpressionSet} object that can then be used for further analysis.
 
-<<ArrayExpressHTSFolders, eval=FALSE>>=
-dir.create("testExperiment")
-dir.create("testExperiment/data")
-@
+\subsection{ Prepare custom datasets on your local computer }
 
-If your data is paired the pipeline is expecting the mates to be separated in two files with the names ending 
-with \_1 and \_2, e.g.: 1974\_1.fastq and 1974\_2.fastq. Place your \fastq{} files into the 'data' directory.
+The procedure is identical to the one described in section 'Prepare a custom dataset'.
 
-The experimental metadata serves to create a set of options used to configure the analysis and includes:
-\begin{itemize}
-\item essential sample annotation, including the experimental factors and their values (e.g. sex of the sample, 
-time in a time series experiment);
-\item essential information about the biological system from which samples were taken, for instance, the organism 
-and organism part (if known)
-\item experimental protocol information, such as the retaining of strand information and the insert size in 
-paired-end reads;
-\item experiment design information including the links between files and samples and their experimental factors;
-\item machine related information, such as the instrument used and the scale of the quality information. 
-\end{itemize}
+\subsection{ Prepare references and annotations }
 
-This information can be easily conveyed using the \MAGETAB{} 
-format\footnote{http://tab2mage.sourceforge.net/docs/magetab\_docs.html}, in particular using 
-the \texttt{IDF} (Investigation Description Format) and the \texttt{SDRF} (Sample and Data Relationship Format) 
-files. You can download and adapt the examples online\footnote{http://www.ebi.ac.uk/Tools/rwiki/Wiki.jsp?page=ArrayExpressHTS\%20Data\%20Preparation.} 
-Name these files somename.idf.txt and somename.sdrf.txt. The \texttt{IDF} and \texttt{SDRF} should be placed into the 'data' folder.
+The pipeline requires reference and annotation data to be located locally where the processing is performed. 
+Therefore, if you're going to process data locally on your desktop or a local host you need to prepare your 
+own references. Please refer to sections 'References and annotations' and 'Custom references and annotations' 
+for more information on how to prepare references.
 
-\subsection{Preparing the References and Annotation data}
+\subsection{ Process custom datasets on your local computer }
 
-References are the organism's genome or transcriptome your reads will be aligned to. For the alignment the references 
-also need to be indexed. References can be stored anywhere on the filesystem as later it can be specified in \Rfunction{ArrayExpressHTS} 
-where they are located. If you would like to use a custom reference not available in \texttt{Ensembl} do prepare custom references. 
-To get a reference genome from \texttt{Ensembl} you can use the \Rfunction{prepareReference} command with the organism, version and type.
+To launch the pipeline on a custom dataset, use \Rfunction{ArrayExpressHTSFastQ} function. The function accepts 
+\Rfunarg{accession} parameter, which is the experiment folder name containing 'data' folder. If you are using 
+custom reference, use \Rfunarg{refdir} parameter to specify the location. Since the configuration is local, set 
+\Rfunarg{usercloud} to FALSE.
 
-<<prepareReference, eval=FALSE>>=
+<<ArrayExpressHTSFastQLocal, eval=FALSE>>=
 
-    # create directory
-    #
-    # Please note, tempdir() is used for automamtic test 
-    # execution. Select directory more appropriate and 
-    # suitable for keeping reference data.
-    #
-    referencefolder = paste(tempdir(), "/reference", sep = "")
-    
-    dir.create(referencefolder)
-
-    # download and prepare reference
-    prepareReference("Homo_sapiens", version = "GRCh37.61", type = "genome", aligner = "bowtie", location = referencefolder )
-    prepareReference("Homo_sapiens", version = "GRCh37.61", type = "transcriptome", aligner = "bowtie", location = referencefolder )
-    prepareReference("Mus_musculus", version = "current", type = "genome", location = referencefolder )
-    prepareReference("Mus_musculus", version = "current", type = "transcriptome", location = referencefolder )
-
+aehts = ArrayExpressHTSFastQ(accession = "testExperiment", 
+        organism = "Homo_sapiens", dir = dstfolder, usercloud = FALSE);
 @
 %
 
-Annotation is used throughout all steps of the pipeline and therefore needs to be prepared as well:
+\section{ Configuration options }
 
-<<prepareAnnotation,eval=FALSE>>=
+You can override the default options used by \Rfunction{ArrayExpressHTS} and \Rfunction{ArrayExpressHTSFastQ} by 
+setting the \Rfunarg{options} parameter to a \Robject{list} specifying values for each option. Example:
 
-    # download and prepare annotation
-    prepareAnnotation("Homo_sapiens", "current", location = referencefolder )
-    prepareAnnotation("Mus_musculus", "NCBIM37.61", location = referencefolder )
+<<ArrayExpressHTSWithOptions, eval=FALSE>>=
+library("ArrayExpressHTS")
+aehts <- ArrayExpressHTS("E-GEOD-16190", 
+        options = list(
+                "insize" = 200, 
+                "count_method" = "mmseq", 
+                "aligner" = "bwa", 
+                "aligner_options" = "-t 16 -M 10"))
 @
 %
 
-\subsection{Running the pipeline}
-After preparing your own data and references you are ready to launch the pipeline. Start R, load the ArrayExpressHTS package 
-and call the \Rfunction{ArrayExpressHTSFastQ} function. Specify the location of the reference data in 'refdir' parameter. 
-Below is the example experiments that comes with the pipeline, which is a very shortened version of E-GEOD-16190 experiment
-\footnote{http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-16190}.
-
-<<runPipeline, eval=FALSE>>=
-
-    # In ArrayExpressHTS/expdata there is testExperiment, which is
-    # a very short version of E-GEOD-16190 experiment, placed there 
-    # for testing reasons.
-    #
-    # Experiment in ArrayExpress:
-    # http://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-16190
-    #
-    # the following piece of code will take ~1.5 hours to compute
-    # on local PC and ~10 minutes on R-Cloud
-    #
-    
-    # if executed on a local PC, make sure tools are available
-    # to the pipeline. Check initDefaultEnvironment help page 
-    # for instructions.
-    # 
-    
-    # create a temporary folder where experiment will be copied
-    # computing experiment in the package folder may cause issues
-    # with file permissions and therefore failures.
-    # 
-    #
-    srcfolder <- system.file("expdata", "testExperiment", package="ArrayExpressHTS");
-    
-    dstfolder <- tempdir();
-    
-    file.copy(srcfolder, dstfolder, recursive = TRUE);
-    
-    # run the pipeline
-    #
-    # set usercloud = FALSE if executing on local PC, 
-    # therefore parallel computation will be disabled
-    #
-    aehts = ArrayExpressHTSFastQ(accession = "testExperiment", organism = "Homo_sappiens", dir = dstfolder);
-        
-    # load the expression set object
-    loadednames = load(paste(dstfolder, "/testExperiment/eset_notstd_rpkm.RData", sep=""));
-    loadednames;
-    
-    get('library')(Biobase);
-    
-    # print out the expression values
-    #
-    head(assayData(eset)$exprs);
-        
-    # print out the experiment meta data 
-    experimentData(eset);
-    pData(eset);
-
-@
-%
-
-\section{Configuration options}
-
-You can override the default options used by \Rfunction{ArrayExpressHTS} by setting the 
-function's \Rfunarg{options} parameter to a \Robject{list} specifying values for each option. 
-The following options are available:
+The options are:
 \begin{itemize}
 \item \emph{stranded}: set to TRUE if a strand specific protocol was used
 \item \emph{insize}: an integer, which will be automatically determined if set to NULL
@@ -292,18 +575,18 @@ The following options are available:
 own manual pages
 \item \emph{count\_feature}: count over 'genes' or 'transcripts'
 \item \emph{count\_method}: 'cufflinks', 'mmseq' or 'count'
-	\emph{count} can only be used with the reference set to transcriptome, though it will estimate gene 
-	level counts if count\_feature is set to transcript and the sequence names in the reference include 
-	both transcript and gene names (e.g. see fasta files from Ensembl). It involves counting reads overlapping 
-	known transcripts. Reads are discarded if they overlap more than one isoform of the same gene or there is 
-	some ambiguity as from which gene they originated from. Count values are thus not very useful by themselves 
-	but can be used for comparison of expression between conditions. 
-    
-    Discarding multi-mapping reads leads to information loss and systematic underestimation of expression. 
-    The \software{mmseq} and \software{cufflinks} statistical methods can be used estimate gene and transcript 
-    level expression taking into account all reads.
-	\emph{mmseq} can only used with \texttt{SAM/BAM} files generated by the \software{TopHat} or 
-	\software{Bowtie} aligners.
+\emph{count} can only be used with the reference set to transcriptome, though it will estimate gene 
+level counts if count\_feature is set to transcript and the sequence names in the reference include 
+both transcript and gene names (e.g. see fasta files from \Ensembl{}). It involves counting reads overlapping 
+known transcripts. Reads are discarded if they overlap more than one isoform of the same gene or there is 
+some ambiguity as from which gene they originated from. Count values are thus not very useful by themselves 
+but can be used for comparison of expression between conditions. 
+
+Discarding multi-mapping reads leads to information loss and systematic underestimation of expression. 
+The \software{mmseq} and \software{cufflinks} statistical methods can be used estimate gene and transcript 
+level expression taking into account all reads.
+\emph{mmseq} can only used with \texttt{SAM/BAM} files generated by the \software{TopHat} or 
+\software{Bowtie} aligners.
 See also \emph{standardise} for a discussion on the types of values returned by these methods.
 
 \item \emph{standardise}: 'TRUE' or 'FALSE'
@@ -318,16 +601,20 @@ and counts/estimates standardised by feature length and scaled to the number of 
 \item \emph{normalisation}: 'node' or 'tmm'
 Normalisation is generally required to remove systematic effects that occur in the data. \emph{normalisation} 
 can be set to either \emph{none} or \emph{tmm}, where \emph{tmm} uses the trimmed mean of M-values for normalisation 
-as implemented in the edgeR\footnote{http://www.bioconductor.org/packages/release/bioc/html/edgeR.html}\footnote{http://genomebiology.com/2010/11/3/R25)}. 
+as implemented in the 
+edgeR\footnote{http://www.bioconductor.org/packages/release/bioc/html/edgeR.html}\footnote{http://genomebiology.com/2010/11/3/R25)}. 
 
 Note: when using 'cufflinks' or 'mmseq' with 'none' or 'tmm' the expression estimates do not correspond one-to-one to 
-read counts. This because, unlike the count method which only uses uniquely mapping reads, both these methods try 
+read counts. This is because, unlike the count method which only uses uniquely mapping reads, both these methods try 
 to estimate transcript abundance from all reads including multi-mapping ones (reads that map to more than one 
 transcript or location). 
 \end{itemize}
+%
 
 \section{Downstream analysis}
+
 \subsection{Differential Expression}
+
 Differential expression for count data can be determined, downstream of the pipeline, with count based DE packages 
 such as edgeR\footnote{http://www.bioconductor.org/packages/release/bioc/html/edgeR.html} and 
 DEseq\footnote{http://www.bioconductor.org/packages/release/bioc/html/DESeq.html}. 
@@ -335,4 +622,3 @@ We do not recommend however using the output of \software{mmseq} and \software{c
 Users should instead provide their own test, of which t-tests or likelihood ratio tests would be suitable examples. 
 
 \end{document}
-

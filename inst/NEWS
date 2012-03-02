@@ -1,3 +1,54 @@
+CHANGES IN VERSION 1.5.2
+------------------------
+UPDATES
+
+    o fixed trace names, cleanup
+    o updated the code downloading SDRFs to rename seq.srdf.txt to .sdrf.txt
+    o unified the functions providing default options
+    o exposed the options that are used in the process
+    o changed errors to warnings where process can still be completed
+    o fixed improper tools detection on the external R Cloud, added 
+      detection using elements in PATH.
+    o simplified setting of tools options, removed the need to invoke
+      initEnvironmentVariables after the options are set, made it automatic
+    o updated help pages
+        o composed all options related pages into "package options"
+          page and "processing options" page. Exposed all options.
+        o removed the initEnvironmentVariables
+        o removed outdated references
+
+
+CHANGES IN VERSION 1.5.1
+------------------------
+
+UPDATES
+    o improved error handling within the ArrayExpressHTS
+    o added stop.on.warnings that allows detection of possible failures 
+      earlier. However if used it would narrow the amount of experiments 
+      that can be successfully processed.
+    o added log.error instead of log.info where necessary
+    o reorganised pipeline options, made them visible to users in the command syntax.
+    o reorganised R Cloud parameters into a single set of visible/usable options
+    o made the pipeline automatically detect "Organism" from SDRF and filter using 
+      a selected value.
+    o reworked reading from SDRF to cover most of the "flexible formatting" cases
+    o improved creation of R Cloud computation cluster, widened usage of retries.
+    o added proper functions to work with environment variables
+    o updated package help pages
+    o updated the annotation processing following Ensembl update.
+    o updated help pages, descriptions and references
+    o updated package vignette documentation
+        o slightly reorganised the structure of the document
+        o rewritten some sections
+        o added a few new sections
+        o added examples where needed
+
+    o reimplemented problematic searching and downloading of .seq.sdrf.txt files
+    o fixed problematic handling of "NA" or "missing" nominal length values from ENA
+    o made a number of reference preparation tasks be able to run in parallel and
+    not affect each other. 
+    o fixed the "count" method to properly read fields of bam files
+
 
 CHANGES IN VERSION 1.3.1
 ------------------------

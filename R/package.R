@@ -2,6 +2,7 @@
 #
 .project = list();
 .projects = list();
+.stop.on.warnings = FALSE;
 #.HTML.file = ""
 
 
@@ -9,19 +10,102 @@ log.info = function(...) {
     cat(paste(date(), getMark(), ... , "\n", sep=""));
 }
 
+log.warning = function(...) {
+    cat(paste(date(), getMark(), "*** WARNING ***\n", sep=""));
+    cat(paste(date(), getMark(), "\n", sep=""));
+    cat(paste(date(), getMark(), "    ", ... , "\n", sep=""));
+    cat(paste(date(), getMark(), "\n", sep=""));
+    
+    if (.stop.on.warnings) {
+        stop();
+    }
+}
+
+log.error = function(...) {
+    cat(paste(date(), getMark(), "*** ERROR ***\n", sep=""));
+    cat(paste(date(), getMark(), "\n", sep=""));
+    cat(paste(date(), getMark(), "    ", ... , "\n", sep=""));
+    cat(paste(date(), getMark(), "\n", sep=""));
+    
+    stop();
+}
+
+
 getMark = function() {
     " [AEHTS] ";
 }
 
-ArrayExpressHTS <- function( accession, usercloud = TRUE, options=getAEDefaultOptions(), nnodes = 10, pool = "32G", attempts = 4, dir = getwd(), refdir = getDefaultReferenceDir(), filter = TRUE, want.reports = TRUE ) {
+getDefaultRCloudOptions = function(){
+    trace.enter("getDefaultRCloudOptions");
+    on.exit({ trace.exit() })
+    
+    return ( list(
+                    nnodes         = "automatic",
+                    pool           = "32G",
+                    nretries  = 4));
+    
+}
+
+getMark = function() {
+    " [AEHTS] ";
+}
+
+cleanupAfterExecution = function() {
+    assignStopOnWarnings(FALSE);
+}
+
+
+
+ArrayExpressHTS <- function( accession,
+        options = list (
+                stranded          = FALSE,
+                insize            = NULL,
+                insizedev         = NULL,
+                reference         = "genome",
+                aligner           = "tophat",
+                aligner_options   = NULL,
+                count_feature     = "transcript",
+                count_options     = "",
+                count_method      = "cufflinks",
+                filter            = TRUE,
+                filtering_options = NULL),
+        usercloud = TRUE,
+        rcloudoptions = list (
+                nnodes     = "automatic",
+                pool       = c("4G", "8G", "16G", "32G", "64G"),
+                nretries   = 4 ),
+        
+        dir = getwd(),
+        refdir = getDefaultReferenceDir(),
+        want.reports = TRUE, 
+        stop.on.warnings = FALSE ) {
+                             
     trace.enter("ArrayExpressHTS"); 
     on.exit({ trace.exit() })
     
+    # add stop on waarnings & cleanup
+    assignStopOnWarnings(stop.on.warnings);
+    on.exit({ assignStopOnWarnings(FALSE); cleanupAfterExecution() }, add = TRUE);
+    
     # merge user and default options
     if (!missing(options)) {
-        options = mergeOptions(options, getAEDefaultOptions());
+        options = mergeOptions(getDefaultProcessingOptions(), options);
+        
+        if (!is.null(options$filtering_options)) {
+            options$filtering_options = mergeOptions(getDefaultFilteringOptions(), options$filtering_options);
+        }
+    } else {
+        options = getDefaultProcessingOptions();
     }
     
+    # merge user and default options
+    if (!missing(rcloudoptions)) {
+        rcloudoptions = mergeOptions(getDefaultRCloudOptions(), rcloudoptions);
+    } else {
+        rcloudoptions = getDefaultRCloudOptions();
+    }
+    
+    # check refdir
     if (!file.exists(refdir)) {
         log.info(refdir, " Not Found.");
         stop();
@@ -37,7 +121,8 @@ ArrayExpressHTS <- function( accession, usercloud = TRUE, options=getAEDefaultOp
     resetProjectErrors();
     
     # create projects
-    projects <- createAEprojects( accession=accession, dir=dir, refdir=refdir, localmode=getPipelineOption("ebilocalmode"), options=options );
+    projects <- createAEprojects( accession = accession, dir = dir, refdir = refdir, 
+                                  localmode = getPipelineOption("ebilocalmode"), options = options );
     
     checkProjectErrors();
     
@@ -47,11 +132,13 @@ ArrayExpressHTS <- function( accession, usercloud = TRUE, options=getAEDefaultOp
         assignProjects(projects);
         
         # optimize node usage
-        if (missing(nnodes)) {
-            nnodes = length(.projects);
+        if (rcloudoptions$nnodes == "automatic") {
+            rcloudoptions$nnodes = length(.projects);
         }
         
-        ecount = runProjects(.projects, usercloud=usercloud, nnodes=nnodes, pool = pool, attempts = attempts, want.reports=want.reports, filter=filter);
+        ecount = runProjects( .projects, usercloud = usercloud, rcloudoptions = rcloudoptions,
+                want.reports = want.reports, filter = options$filter );
+        
     } else {
         log.info("No data found to compute.");
         ecount = NULL;
@@ -65,18 +152,63 @@ ArrayExpressHTS <- function( accession, usercloud = TRUE, options=getAEDefaultOp
     return(ecount);
 }
 
-ArrayExpressHTSFastQ <- function( accession, organism, quality = c("auto", "FastqQuality", "SFastqQuality"), usercloud = TRUE, options=getAEDefaultOptions(), nnodes = 10, pool = "32G", attempts = 4, dir = getwd(), refdir = getDefaultReferenceDir(), filter = TRUE, want.reports = TRUE ) {
+ArrayExpressHTSFastQ <- function( accession, 
+        organism = c("automatic", "Homo_sapiens", "Mus_musculus" ), 
+        quality = c("automatic", "FastqQuality", "SFastqQuality"), 
+        options = list(
+                stranded          = FALSE,
+                insize            = NULL,
+                insizedev         = NULL,
+                reference         = "genome",
+                aligner           = "tophat",
+                aligner_options   = NULL,
+                count_feature     = "transcript",
+                count_options     = "",
+                count_method      = "cufflinks",
+                filter            = TRUE,
+                filtering_options = NULL),
+        usercloud = TRUE,
+        rcloudoptions = list(
+                nnodes        = "automatic",
+                pool          = c("4G", "8G", "16G", "32G", "64G"),
+                nretries      = 4),
+        dir = getwd(),
+        refdir = getDefaultReferenceDir(),
+        want.reports = TRUE,
+        stop.on.warnings = FALSE ) {
+                                  
     trace.enter("ArrayExpressHTSFastQ");
     on.exit({ trace.exit() })
     
+    # add stop on waarnings & cleanup
+    assignStopOnWarnings(stop.on.warnings);
+    on.exit({ assignStopOnWarnings(FALSE); cleanupAfterExecution() }, add = TRUE);
+    
     # merge user and default options
     if (!missing(options)) {
-        options = mergeOptions(options, getAEDefaultOptions());
+        options = mergeOptions(getDefaultProcessingOptions(), options);
+        
+        if (!is.null(options$filtering_options)) {
+            options$filtering_options = mergeOptions(getDefaultFilteringOptions(), options$filtering_options);
+        }
+    } else {
+        options = getDefaultProcessingOptions();
+    }
+    
+    if (!missing(rcloudoptions)) {
+        rcloudoptions = mergeOptions(getDefaultRCloudOptions(), rcloudoptions);
+    } else {
+        rcloudoptions = getDefaultRCloudOptions();
+    }
+    
+    # set default quality
+    if (!missing(organism)) {
+        organism = "automatic";
     }
     
     # set default quality
     if (!missing(quality)) {
-        quality = "auto";
+        quality = "automatic";
     }
     
     if (!file.exists(refdir)) {
@@ -95,7 +227,8 @@ ArrayExpressHTSFastQ <- function( accession, organism, quality = c("auto", "Fast
     resetProjectErrors();
         
     # create projects
-    projects <- createFastQProjects( accession=accession, organism=organism, quality=quality, dir=dir, refdir=refdir, options=options )
+    projects <- createFastQProjects( accession = accession, organism = organism, quality = quality, 
+            dir = dir, refdir=refdir, options = options )
     
     checkProjectErrors();
     
@@ -106,11 +239,12 @@ ArrayExpressHTSFastQ <- function( accession, organism, quality = c("auto", "Fast
         assignProjects(projects);
         
         # optimize node usage
-        if (missing(nnodes)) {
-            nnodes = length(.projects);
+        if (rcloudoptions$nnodes == "automatic") {
+            rcloudoptions$nnodes = length(.projects);
         }
         
-        ecount = runProjects(.projects, usercloud=usercloud, nnodes=nnodes, pool = pool, attempts = attempts, want.reports=want.reports, filter=filter);
+        ecount = runProjects( .projects, usercloud = usercloud, rcloudoptions = rcloudoptions, 
+                want.reports = want.reports, filter = options$filter);
         
     } else {
         log.info("No data found to compute.");
@@ -162,7 +296,13 @@ assignOneProject <- function(project){
     assignInNamespace('.project', project, ns="ArrayExpressHTS");
 }
 
-runProjects <- function( .projects, usercloud = TRUE, nnodes = 10, pool = "32G", attempts = 4, want.reports = FALSE, filter = TRUE) {
+assignStopOnWarnings <- function(stop.on.warnings){
+    assignInNamespace('.stop.on.warnings', stop.on.warnings, ns="ArrayExpressHTS");
+}
+
+runProjects <- function( .projects, usercloud = TRUE, rcloudoptions = rcloudoptions, 
+        want.reports = FALSE, filter = TRUE ) {
+    
     trace.enter("runProjects");
     on.exit({ trace.exit() })
     
@@ -177,7 +317,8 @@ runProjects <- function( .projects, usercloud = TRUE, nnodes = 10, pool = "32G",
     if( usercloud ) {
         # cluster cleanup
         on.exit({try( cleanupCluster(), silent = TRUE )}, add = TRUE);
-        prepareCluster(nnodes, pool, attempts, logfolder = attr(.projects, 'metadata')$logfolder);
+        
+        prepareCluster(rcloudoptions, logfolder = attr(.projects, 'metadata')$logfolder);
         
         # populate projects data
         log.info( "populating project data" );
@@ -188,7 +329,8 @@ runProjects <- function( .projects, usercloud = TRUE, nnodes = 10, pool = "32G",
         clusterEvalQ(getCluster(), ArrayExpressHTS:::finalCountdown());
         
         log.info( "cluster started" );
-        result = try( clusterApplyLB(getCluster(), .projects, ArrayExpressHTS:::processOneProject, .projects, want.reports) ); 
+        result = try( clusterApplyLB(getCluster(), .projects, ArrayExpressHTS:::processOneProject, 
+                        .projects, want.reports, .stop.on.warnings) ); 
         
         if (inherits(result, "try-error")) { 
             log.info(" Error during the processing");
@@ -198,11 +340,12 @@ runProjects <- function( .projects, usercloud = TRUE, nnodes = 10, pool = "32G",
         log.info( "setting environment" );
         
         # setup environment
-        sink <- initDefaultEnvironment();
+        sink <- initEnvironmentVariables();
         
         for( .project in .projects ) {
             log.info( "working project ", .project$name );
-            result = try( processOneProject(.project, .projects, want.reports) ); 
+            
+            result = try( processOneProject(.project, .projects, want.reports, .stop.on.warnings) ); 
             
             # memory usage
             print.memory.usage("Memory: runProjects step 2")
@@ -265,7 +408,8 @@ setCluster <- function(cluster) {
 
 # prepare cluster
 #
-prepareCluster <- function(nnodes, pool, attempts, logfolder) {
+prepareCluster <- function(rcloudoptions, logfolder) {
+    
     trace.enter("prepareCluster");
     on.exit({ trace.exit() })
     
@@ -275,6 +419,10 @@ prepareCluster <- function(nnodes, pool, attempts, logfolder) {
         stop();
         return();
     }
+    
+    # convert, in case a string is provided
+    rcloudoptions$nnodes   = as.integer(rcloudoptions$nnodes);
+    rcloudoptions$nretries = as.integer(rcloudoptions$nretries);
     
     foundCluster = FALSE;
     
@@ -288,84 +436,143 @@ prepareCluster <- function(nnodes, pool, attempts, logfolder) {
     
     log.info( "creating new cluster" );
     
-    for (attempt in 1:attempts) {
+    finalcluster = list();
+    
+    for (attempt in 1:rcloudoptions$nretries) {
         
         # allocate cluster
         #
+        cl0 = makeCluster(rcloudoptions$nnodes - length(finalcluster), 
+                type="RCLOUD", pool = rcloudoptions$pool);
         
-        cl0 = makeCluster(nnodes, type="RCLOUD", pool=pool);
+        finalcluster = mergeClusters(cl0, finalcluster);
         
-        if (length(cl0) == 0) {
-            log.info( "Warning: ", attempt, " attempt to create a cluster failed" );
+        if (length(finalcluster) == rcloudoptions$nnodes) {
+            # cluster created successfully
+            #
+            break;
+        } else {
+            log.info( attempt, " attempt to create a cluster" );
+        
+            if (attempt == rcloudoptions$nretries) {
             
-            if (attempt == attempts) {
+                if (length(finalcluster) == 0) {
+                    
+                    log.info("Error: computing cluster could not be created");
+                    stop();
                 
-                log.info("Error: computing cluster could not be created");
-                stop();
-            
+                } else {
+                    
+                    log.warning(length(finalcluster), " nodes of ", 
+                            rcloudoptions$nnodes," were created.");
+                    break;
+                }
+                
             } else {
+                minutes.to.wait = ceiling(runif(1, 5, 15))
                 
-                minutes.to.wait = ceiling(runif(1, 1, 10))
-                
-                log.info( "Waiting for ", minutes.to.wait ," minutes before next attempt" );
+                log.info( "Waiting ", minutes.to.wait ," minutes before next attempt" );
                 
                 Sys.sleep(minutes.to.wait * 60);
             }
-        } else {
-            
-            # cluster created successfully
-            # add attributes
-            #
-            attr(cl0, "pool") = pool;
-            
-            # store it
-            #
-            setCluster(cl0);
-            
-            break;
         }
     }
     
-    delaytime = 5;
+    # add attributes
+    #
+    attr(finalcluster, "pool") = rcloudoptions$pool;
     
-    log.info( delaytime, " seconds init wait" );
+    # store it
+    #
+    setCluster(finalcluster);
     
-    Sys.sleep(5);
+    # delay in case we allocated a server 
+    # that is being initialized, let it finish
+    #
+    
+    delaytime = 10;
+    
+    log.info( delaytime, " seconds cluster init wait" );
+    
+    Sys.sleep(delaytime);
     
     log.info( "starting cluster logs" );
     
     # install output files
+    #
     dir.create(logfolder, showWarnings = FALSE);
     
     log.info("log folder = ", logfolder );
     
-    sink <- clusterApply(getCluster(), 1:length(getCluster()), ArrayExpressHTS:::createServerLog, logfolder, 'log');
+    sink <- clusterApply(getCluster(), 1:length(getCluster()), 
+            ArrayExpressHTS:::createServerLog, logfolder, 'log');
     
     clusterEvalQ(getCluster(), options('outfile0'));
     
     # display main server name
+    #
     log.info( "cluster master ", get('.PrivateEnv')$getServerName() );
     
     log.info( "cluster nodes" );
 
     # diaply cluster and node names
+    #
     print( clusterEvalQ(getCluster(), c( get('.PrivateEnv')$getServerName(), Sys.info()[4] )) )
     
     log.info( "initializing cluster" );
     
     # run .jinit()
+    #
     sink <- clusterEvalQ(getCluster(), .jinit());
+    
+    # propagate global to the cluster options
+    #
+    log.info( "loading global options" );
+    
+    opt001 = options();
+    
+    sink <- clusterApply(getCluster(), 1:length(getCluster()), function(i, x){ options(x) }, opt001)
     
     log.info( "loading libraries on cluster nodes" );
 
+    # detach the package
+    #
+    sink <- clusterEvalQ(getCluster(), 
+        if (("package:ArrayExpressHTS" %in% search())) { detach('package:ArrayExpressHTS', unload=TRUE) } )
+    
     # load the library
     #
     sink <- clusterEvalQ(getCluster(), library( "ArrayExpressHTS" ));
     
-    log.info( "setting environment" );
+    optionsToPrint = c(
+        "ArrayExpressHTS.fasta_formatter",
+        "ArrayExpressHTS.cufflinks",
+        "ArrayExpressHTS.samtools",
+        "ArrayExpressHTS.bwa",
+        "ArrayExpressHTS.mmseq",
+        "ArrayExpressHTS.bam2hits",
+        "ArrayExpressHTS.bowtie",
+        "ArrayExpressHTS.tophat")
     
+    clusterApply(getCluster(), 1:length(getCluster()), 
+        function(i, opts){ for(o in opts) { message("Global ", o, " = ", 
+            getOption(o));} }, optionsToPrint)
+    
+    log.info( "loading pipeline options" );
+    
+    opt002 = getPipelineOptions();
+    
+    sink <- clusterApply(getCluster(), 1:length(getCluster()), 
+        function(i, x){ ArrayExpressHTS:::assignPipelineOptions(x) }, opt002)
+
+    clusterApply(getCluster(), 1:length(getCluster()), 
+        function(i, opts){ for(o in opts) { message("Package ", o, " = ", 
+            ArrayExpressHTS:::getPipelineOption(o));} }, optionsToPrint)
+    
+    
+    #log.info( "setting environment" );
     # setup environment
-    sink <- clusterEvalQ(getCluster(), ArrayExpressHTS:::initDefaultEnvironment())
+    #sink <- clusterEvalQ(getCluster(), ArrayExpressHTS:::initEnvironmentVariables())
 
 }
 
@@ -396,10 +603,13 @@ setProjectData <- function(unused, projects) {
     assignProjects(projects)
 }
 
-processOneProject <- function(project, projects, want.reports) {
+processOneProject <- function(project, projects, want.reports, stop.on.warnings) {
     trace.enter("processOneProject");
     on.exit({ trace.exit() })
     
+    on.exit({ assignStopOnWarnings(FALSE); cleanupAfterExecution(); })
+    
+    assignStopOnWarnings(stop.on.warnings);
     assignProjects(projects)
     assignOneProject(project)
     
@@ -414,9 +624,6 @@ processOneProject <- function(project, projects, want.reports) {
     print.memory.usage("Memory: processOneProject step 1")
     
     #.project$qual_type = class(quality( seq [[1]] )[1])[1]
-    
-    # memory usage
-    print.memory.usage("Memory: processOneProject step 3")
     
     if (want.reports) {
         
@@ -533,7 +740,7 @@ finalCountdown <- function(x){
 
 # organism = "Homo_sapiens", version="GRCh37.60", type="genome"/"transcriptome", location="/ebi/microarray/home/biocep/sequencing"; aligner="bowtie"
 prepareReference <- function( organism, version = "current", type = c("genome", "transcriptome"), 
-    location = getDefaultReferenceDir(), aligner = c("bwa", "bowtie", "tophat"), refresh = FALSE, run = TRUE ) {
+        location = getDefaultReferenceDir(), aligner = c("bwa", "bowtie", "tophat"), refresh = FALSE, run = TRUE ) {
         
     trace.enter("prepareReference");
     on.exit({ trace.exit() })
@@ -565,7 +772,8 @@ prepareReference <- function( organism, version = "current", type = c("genome", 
 }
 
 # organism = "Homo_sapiens"  version="GRCh37.60" location="/ebi/microarray/home/biocep/sequencing" aligner="bowtie"
-prepareAnnotation <- function( organism, version = "current", location = getDefaultReferenceDir(), refresh = FALSE, run = TRUE ) {
+prepareAnnotation <- function( organism, version = "current", 
+        location = getDefaultReferenceDir(), refresh = FALSE, run = TRUE ) {
     
     trace.enter("prepareAnnotation");
     on.exit({ trace.exit() })

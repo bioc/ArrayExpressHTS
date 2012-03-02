@@ -13,12 +13,7 @@ align <- function( update = FALSE, sure.i.want.to.run.this = FALSE ) {
         fail = FALSE
     }
     if( !fail ) {
-        #filename = paste(.project$aligner$out_dir, "/", .project$aligner$files[2], sep="")
-        #if( file.exists( filename ) && !update ) {
-        #    log.info( "Alignment already converted to BAM. Skipping..." )
-        #} else {
-            call_samtools( sure.i.want.to.run.this, update )
-        #}
+        call_samtools( sure.i.want.to.run.this, update )
     }
 }
 
@@ -77,7 +72,10 @@ align_tophat <- function( run = FALSE ) {
                 ".", .project$reference$version, ".gtf",
                 " --no-novel-juncs --min-isoform-fraction 0.0 --min-anchor-length 3", sep="" )
     }
-    cmds = c( cmds, paste( "tophat ", options, " -o ", output_dir, " ", 
+    
+    tophatcmd = paste(getPipelineOption("ArrayExpressHTS.tophat"), "/tophat", sep="");
+
+    cmds = c( cmds, paste( tophatcmd, " ", options, " -o ", output_dir, " ", 
                     .project$reference$file, " ", fq_files, sep="" ) )
     
     i = 1
@@ -146,9 +144,11 @@ align_bowtie <- function( run = FALSE ) {
         }
     }
     
-    cmds = c(cmds, paste( "bowtie", options, 
+    bowtiecmd = paste(getPipelineOption("ArrayExpressHTS.bowtie"), "/bowtie", sep="");
+    
+    cmds = c(cmds, paste( bowtiecmd, " ", options, 
                     .project$reference$file, fq_files,
-                    paste( output_dir, "/", "accepted_hits.sam", sep="") ) )
+                    paste( output_dir, "/", .project$aligner$files[1], sep="") ) ) # "accepted_hits.sam"
     
     i = 1
     for( cmd in cmds ) {
@@ -188,20 +188,24 @@ align_bwa <- function( run = FALSE ) {
     }
     
     sai = paste( "fq", 1:length(fq_files), ".sai", sep="" )
-    cmds = c( cmds, paste( "bwa aln ", options, " ", reference_file, " ", .project$fq_files, " > ", output_dir, "/", sai, sep="" ) )
+    
+    bwacmd = paste(getPipelineOption("ArrayExpressHTS.bwa"), "/bwa", sep="");
+    
+    cmds = c( cmds, paste( bwacmd, " aln ", options, " ", reference_file, " ", .project$fq_files, " > ", output_dir, "/", sai, sep="" ) )
     
     options = "-n 40"
     if( .project$pairing$type == "SR" ) {
-        cmds = c( cmds, paste( "bwa samse ", options, " ", 
+        cmds = c( cmds, paste( bwacmd, " samse ", options, " ", 
                         reference_file, " ", output_dir, "/", sai, " ", .project$fq_files, " > ", 
                         output_dir, "/", .project$aligner$files[1], sep="" ) )
     } else {
         # -a is not used, only when there are not enough alignments to infer the insert size
         #if( !is.null(.project$pairing$insize) )
         #    options = paste( "-a", .project$pairing$insize )
-        cmds = c( cmds, paste( "bwa sampe ", options, " ", reference_file, " ", paste( output_dir, "/", sai, sep="", collapse=" " ), " ",
+        cmds = c( cmds, paste( bwacmd, " sampe ", options, " ", reference_file, " ", paste( output_dir, "/", sai, sep="", collapse=" " ), " ",
                         paste( fq_files, collapse=" "), " > ", output_dir, "/", .project$aligner$files[1], sep="" ) )
     }
+    
     
     i = 1
     for( cmd in cmds ) {
@@ -237,21 +241,38 @@ call_samtools <- function( run, update = FALSE ) {
     bamfile = "accepted_hits.bam"
     sortedbam = sub( ".bam", ".sorted.bam", bamfile )
     
+    samtoolscmd = paste(getPipelineOption("ArrayExpressHTS.samtools"), "/samtools", sep="");
+    
+    
+    # produce .sam from .bam if .sam is not present
+    if( !file.exists( paste( output_dir, "/", samfile, sep="") ) || update ) {
+        if ( file.exists( paste( output_dir, "/", bamfile, sep="") )) {
+            cmds = c( cmds, paste( samtoolscmd, " view ", output_dir, "/", bamfile, " > ", 
+                            output_dir, "/", samfile, sep="" ) )
+                            
+        }
+    }
+    
+    # produce .bam from .sam if .bam is not pres
     if( !file.exists( paste( output_dir, "/", bamfile, sep="" )) || update ) {
         referencefai = paste(reference,".fai",sep="")
-        if( !file.exists(referencefai) || update )
-            cmds = c( cmds, paste( "samtools faidx", reference ) )
         
-        cmds = c( cmds, paste( "samtools import ", referencefai, " ", output_dir, "/", samfile, " ", 
+        if( !file.exists(referencefai) || update ) {
+            cmds = c( cmds, paste( samtoolscmd, " faidx", reference ) )
+        }
+        
+        cmds = c( cmds, paste( samtoolscmd, " import ", referencefai, " ", output_dir, "/", samfile, " ", 
                         output_dir, "/", bamfile, sep="" ) )
     }
+    
     if( !file.exists( paste( output_dir, "/", sortedbam, sep="" ) ) || update ) {
+        
         # needs to be sorted to be read into R
-        cmds = c( cmds, paste( "samtools sort ", output_dir, "/", bamfile, " ", output_dir, "/", "accepted_hits.sorted", sep="" ) )
+        cmds = c( cmds, paste( samtoolscmd, " sort ", output_dir, "/", bamfile, " ", output_dir, "/", "accepted_hits.sorted", sep="" ) )
         # needed by mmseq
-        cmds = c( cmds, paste( "samtools sort -n ", output_dir, "/", bamfile, " ", output_dir, "/", "accepted_hits.sortednames", sep="" ) )
+        cmds = c( cmds, paste( samtoolscmd, " sort -n ", output_dir, "/", bamfile, " ", output_dir, "/", "accepted_hits.sortednames", sep="" ) )
         # needs to be indexed to be read into R
-        cmds = c( cmds, paste( "samtools index ", output_dir, "/", sortedbam, sep="" ) )
+        cmds = c( cmds, paste( samtoolscmd, " index ", output_dir, "/", sortedbam, sep="" ) )
     }
     
     filename = paste( output_dir, "/", bamfile, sep="" )
@@ -284,25 +305,24 @@ call_samtools <- function( run, update = FALSE ) {
         
         # needs to be sorted to be read into R
         if( !file.exists(sorted) ) {
-            cmds = c( cmds, paste( "samtools sort ", newfile, " ", sorted, sep="" ) ) 
+            cmds = c( cmds, paste( samtoolscmd, " sort ", newfile, " ", sorted, sep="" ) ) 
         }
         
         # needs to be indexed to be read into R
         
         bai = paste( final, ".bai",sep="")
         if( !file.exists(bai) ) {
-            cmds = c( cmds, paste( "samtools index ", final, sep="" ) )
+            cmds = c( cmds, paste( samtoolscmd, " index ", final, sep="" ) )
         } 
-    } else # link files
+    } else {
         cmds = c( cmds, paste( "ln -s ", output_dir, "/", sortedbam, " ", final, sep="" ) )
-    #.project$aligner$files[2] = final
+    }
     
-    #if( .project$aligner$type != "bwa" ) {
-    #    cmds = c( cmds, paste( "samtools fillmd ", output_dir, "/", sortedbam, " ", reference, 
-    #                    " > ", output_dir, "/", "accepted_hits.sorted.fillmd.bam", sep="" ) )
-    #}
-    if( !file.exists( paste( output_dir, "/", "raw.pileup", sep="" ) ) || update ) {
-        cmds = c( cmds, paste( "samtools pileup -c -f ", reference, " ", output_dir, "/", sortedbam, " > ",
+    if( !file.exists( paste( output_dir, "/", "raw.pileup", sep="" ) ) || update ) { # pileup -c -f
+        
+        # new workflow
+        #
+        cmds = c( cmds, paste( samtoolscmd, " mpileup -f ", reference, " ", output_dir, "/", sortedbam, " > ",
                         output_dir, "/", "raw.pileup", sep="" ) )
     }
     
@@ -560,7 +580,7 @@ bamlist_to_alignedread <- function( bam, update = FALSE, return = TRUE ) {
                             list( BStringSet( bam[["qual"]] ) ) ), chrnames, bam[["pos"]], bam[["strand"]], 
                     FastqQuality( as.character(bam[["mapq"]]) ), aligndata )
         } else { # paired reads
-            log.info( "Warning: not implemented for paired reads!" )
+            log.warning( "Warning: not implemented for paired reads!" )
             aln = NULL
         }
         
@@ -723,6 +743,9 @@ call_cufflinks <- function( gtf = TRUE, run = FALSE, update = FALSE ) {
     usamf = sub( "sam", "unsorted.sam", samf )
     fail = FALSE
     
+    cufflinkscmd = paste(getPipelineOption("ArrayExpressHTS.cufflinks"), "/cufflinks", sep="");
+
+    
     filename = paste( .project$aligner$out_dir, "/", 
             .project$count$method, "_", .project$count$files["transcript"], sep="" )
     filename2 = paste( .project$aligner$out_dir, "/", 
@@ -733,7 +756,7 @@ call_cufflinks <- function( gtf = TRUE, run = FALSE, update = FALSE ) {
         log.info( "File ", filename, " exists." )
     } else { 
         if( .project$aligner$type != "tophat" && .project$aligner$type != "custom" ) {
-            log.info( "WARNING! you should run cufflinks on the output of TopHat only.")
+            log.warning( "WARNING! you should run cufflinks on the output of TopHat only.")
             cmds = c( cmds, paste( "sort -k 3,3 -k 4,4n", samf, ">", ssamf ) )
             cmds = c( cmds, paste("mv", samf, usamf) )
             cmds = c( cmds, paste("mv", ssamf, samf) )
@@ -750,10 +773,13 @@ call_cufflinks <- function( gtf = TRUE, run = FALSE, update = FALSE ) {
         
         #options = paste( options, " -o ", .project$aligner$out_dir, sep="" );
         
-        cmds = c( cmds, paste( "cufflinks ", options, " ", .project$aligner$out_dir, "/", .project$aligner$files[1], sep="" ) )
+        cmds = c( cmds, paste( cufflinkscmd, " ", options, " ", .project$aligner$out_dir, "/", .project$aligner$files[1], sep="" ) )
         
-        cmds = c( cmds, paste( "mv transcripts.expr", filename ))
-        cmds = c( cmds, paste( "mv genes.expr", filename2 ))
+        # new workflow
+        #
+        cmds = c( cmds, paste( "mv isoforms.fpkm_tracking", filename ))
+        cmds = c( cmds, paste( "mv genes.fpkm_tracking", filename2 ))        
+        
         cmds = c( cmds, paste( "mv transcripts.gtf", filename3 ))
         
         fail = run_cmds( cmds, run )
@@ -768,11 +794,15 @@ call_mmseq <- function( run = FALSE, update = FALSE ) {
     cmds = list()
     fail = FALSE
     
+    bam2hitscmd = paste(getPipelineOption("ArrayExpressHTS.bam2hits"), "/bam2hits", sep="");
+    mmseqcmd = paste(getPipelineOption("ArrayExpressHTS.mmseq"), "/mmseq", sep="");
+
+    
     filename = paste( .project$aligner$out_dir, "/", "hits_file", sep="" ) 
     if( file.exists(filename) && !update && file.info(filename)$size != 0 ) {
         log.info( "File ", filename, " exists." )
     } else {
-           cmds = c( cmds, paste( "bam2hits-0.9.8-Linux-x86_64 -m \"(E\\S+).*gene:(E\\S+)\" 1 2 ",
+           cmds = c( cmds, paste( bam2hitscmd, " -m \"(E\\S+).*gene:(E\\S+)\" 1 2 ",
                         .project$reference$file, ".fa", " ", 
                         .project$aligner$out_dir, "/", .project$aligner$files[3], " > ", filename, sep="") )
     }
@@ -784,7 +814,7 @@ call_mmseq <- function( run = FALSE, update = FALSE ) {
     } else {
         mmseqfilename = paste( .project$aligner$out_dir, "/", "mmseq_out", sep="" )
         
-        cmds = c( cmds, paste("mmseq-0.9.8-Linux-x86_64 ", filename, " ", mmseqfilename, sep="") )
+        cmds = c( cmds, paste(mmseqcmd, " ", filename, " ", mmseqfilename, sep="") )
         cmds = c( cmds, paste("mv ", .project$aligner$out_dir, "/mmseq_out.mmseq ", 
                         .project$aligner$out_dir, "/mmseq_transcripts.expr", sep="") )
         cmds = c( cmds, paste("mv ", .project$aligner$out_dir, "/mmseq_out.gene.mmseq ", 
@@ -807,9 +837,10 @@ call_count <- function( run = FALSE, update = FALSE ) {
         filename = paste( .project$aligner$out_dir, "/", .projects[[1]]$aligner$files[2], sep="" )
         log.info( "Reading bam header" )
         header = scanBamHeader( filename )[[1]]$targets
-        len =  regexpr( " ", names(header)[1] )[1]
-        trans = substr( names(header), 1, len-1 )
-        names(header) = trans
+        
+        #len =  regexpr( " ", names(header)[1] )[1]
+        #trans = substr( names(header), 1, len-1 )
+        #names(header) = trans
         
         log.info( "Reading bam file" )
         bam = scanBam( filename, param=bamParam( what=c("qname", "rname"), 
@@ -818,7 +849,11 @@ call_count <- function( run = FALSE, update = FALSE ) {
         dups = duplicated(bam$qname) | rev(duplicated(rev(bam$qname)))
         bam$qname = bam$qname[!dups]
         bam$rname = bam$rname[!dups]
-        trans = substr( bam$rname, 1, len-1 )
+        
+        
+        #trans = substr( bam$rname, 1, len-1 )
+        
+        trans = bam$rname
         count = table(trans)
         tab = data.frame( trans_id=names(count), count=as.numeric(count), 
                 length=header[match(names(count), names(header))] )
@@ -831,9 +866,14 @@ call_count <- function( run = FALSE, update = FALSE ) {
         log.info( "Saved to ", filenames["transcript"] )
         
         bam$rname = as.character(bam$rname)
-        trans = sapply( 1:length(bam$rname), function(x) 
-                    substr( bam$rname[x], nchar(bam$rname[x])-len+2, nchar(bam$rname[x]) ) )
+        
+        #trans = sapply( 1:length(bam$rname), function(x) 
+        #            substr( bam$rname[x], nchar(bam$rname[x])-len+2, nchar(bam$rname[x]) ) )
+        
+        trans = bam$rname;
+        
         count = table(trans)
+        
         tab = data.frame( gene_id=names(count), count=as.numeric(count), 
                 length=header[match(names(count), names(header))] )
         rownames(tab) = NULL

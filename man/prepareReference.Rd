@@ -16,10 +16,10 @@
 }
 \arguments{
     \item{organism}{ supported organism names can be viewed in the Ensemble database. Check 'ftp://ftp.ensembl.org/pub'. }
-    \item{version}{ 'current' or other appropriate version. Check 'ftp://ftp.ensembl.org/pub'. }
-    \item{type}{ two values are supported: "genome", "transcriptome" }
+    \item{version}{ \code{"current"} or other appropriate version. Check 'ftp://ftp.ensembl.org/pub'. }
+    \item{type}{ two values are supported: \code{"genome"}, \code{"transcriptome"} }
     \item{location}{ indicates where the reference data should be stored. }
-    \item{aligner}{ 3 types of aligners are supported: 'bwa', 'bowtie' and 'tophat'. }
+    \item{aligner}{ 3 types of aligners are supported: \code{"bwa"}, \code{"bowtie"} and \code{"tophat"}. }
     \item{refresh}{ if TRUE, existing reference data will be rebuilt. }
     \item{run}{ if FALSE, the downloading and processing commands will not be executed. }
 }
@@ -44,8 +44,7 @@ if (isRCloud()) {
     #
         
     # if executed on a local PC, make sure tools are available
-    # to the pipeline. Check initDefaultEnvironment help page 
-    # for instructions.
+    # to the pipeline.
     # 
         
     # create directory

@@ -16,7 +16,7 @@
 \seealso{
     \code{\link{getPipelineOption}}, 
     \code{\link{getPipelineOptions}}, 
-    \code{\link{initDefaultEnvironment}}, 
+    \code{\link{initEnvironmentVariables}}, 
     \code{\link{ArrayExpressHTS}}}
 \author{
     Andrew Tikhonov <andrew@ebi.ac.uk>, Angela Goncalves <angela.goncalves@ebi.ac.uk>

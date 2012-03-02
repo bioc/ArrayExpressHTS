@@ -12,7 +12,7 @@
 }
 \arguments{
     \item{organism}{ supported organism names can be viewed in the Ensemble database. Check 'ftp://ftp.ensembl.org/pub'. }
-    \item{version}{ 'current' or other appropriate version. Check 'ftp://ftp.ensembl.org/pub'. }
+    \item{version}{ \code{"current"} or other appropriate version. Check 'ftp://ftp.ensembl.org/pub'. }
     \item{location}{ indicates where the annotation data should be stored. }
     \item{refresh}{ if TRUE, existing annotation data will be rebuilt. }
     \item{run}{ if FALSE, the commands to obtain and process the annotation will not be executed. }
@@ -30,7 +30,8 @@
 }
 \examples{
     
-if (isRCloud()) { # disabled on local configs so as not to kill package building process
+if (isRCloud()) { # disabled on local configs 
+    # so as not to affect package building process
     
     par(ask = FALSE)
 
@@ -38,8 +39,7 @@ if (isRCloud()) { # disabled on local configs so as not to kill package building
     #
     
     # if executed on a local PC, make sure tools are available
-    # to the pipeline. Check initDefaultEnvironment help page 
-    # for instructions.
+    # to the pipeline.
     # 
     
     # create directory

@@ -14,7 +14,7 @@
     
     # second: init default environment
     #
-    initDefaultEnvironment();
+    initEnvironmentVariables();
 
 }
 

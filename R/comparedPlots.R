@@ -74,7 +74,7 @@ plot_scatter_samples <- function() {
     cb = combn( sampleNames(assayData(e)), 2 )
     e10 = log10( exprs(e) )
     if( ncol(cb) >= 6 ) {
-        log.info( "Warning, this function can only plot 6x6 samples, any extra will not be plotted." )
+        log.info( "*** Please note, this function can only plot 6x6 samples, any extra will not be plotted. ***" )
     }
     ncols = min( 6, ncol(cb) )
     par( mfrow=c(ceiling(ncols/2),ceiling(ncols/2)) )

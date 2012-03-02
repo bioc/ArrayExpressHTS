@@ -20,7 +20,7 @@ obtainENAFastQDataFiles <- function( accession, resultset, datadir, localmode = 
     
     for (i in 1:length(fastQs)) { 
         if (is.null(fastQs[[i]])) { 
-            log.info('Warning: no runs available for ', names(fastQs[i])); 
+            log.warning('Warning: no runs available for ', names(fastQs[i])); 
         }
     }
     
@@ -54,7 +54,8 @@ obtainENAFastQDataFiles <- function( accession, resultset, datadir, localmode = 
                 result = system(cmd);
                 
                 if (result != 0) {
-                    log.info('Error copying ', fastqpath, ' to ', destfile);
+                    log.error('Error copying ', fastqpath, ' to ', destfile);
+                    
                     return(FALSE);
                 }
                 
@@ -65,10 +66,11 @@ obtainENAFastQDataFiles <- function( accession, resultset, datadir, localmode = 
                 
                 log.info('downloading ', url, ' to ', destfile);
                 
-                result0 = try(download.file(url=url, destfile=destfile),silent = FALSE);
+                result0 = try(download.file(url = url, destfile = destfile, quiet = TRUE), silent = FALSE);
                 
                 if (inherits(result0, 'try-error')) {
-                    log.info('Error downloading ', url, ' to ', destfile);
+                    log.error('Error downloading ', url, ' to ', destfile);
+                    
                     return(FALSE);
                 }
                 
@@ -81,7 +83,8 @@ obtainENAFastQDataFiles <- function( accession, resultset, datadir, localmode = 
             result = system(cmd);
             
             if (result != 0) {
-                log.info('Error unzipping ', destfile);
+                log.error('Error unzipping ', destfile);
+                
                 return(FALSE);
             }
         }
@@ -90,27 +93,74 @@ obtainENAFastQDataFiles <- function( accession, resultset, datadir, localmode = 
     return(TRUE);
 }
 
+
 getExperimentDescriptors <- function( accession, datadir, localmode = TRUE ) {
-    trace.enter("copyExperimentDescriptors");
+    trace.enter("getExperimentDescriptors");
     on.exit({ trace.exit() })
     
-    sdrflocation = paste(datadir,paste(accession,'.sdrf.txt',sep=''), sep='/');
+    # download IDF
+    #
+    #
     idflocaion = paste(datadir,paste(accession,'.idf.txt',sep=''), sep='/');
     
-    
-    if (localmode) {
-        sdrffname = getAESDRFFilename(accession);
-        idffname = getAEIDFFilename(accession);
-        
-        file.copy(sdrffname, sdrflocation);
-        file.copy(idffname, idflocaion);
-    
+    if (file.exists(idflocaion)) {
+        log.info('Found IDF ', idflocaion);
     } else {
-    
-        download.file(makeAESDRFURL(accession), sdrflocation)
-        download.file(makeAEIDFURL(accession), idflocaion)
+        
+        if (localmode) {
+            idfsource = getAEIDFFilename(accession);
+        } else {
+            idfsource = getAEIDFURL(accession);
+        }
+        
+        if (!is.null(idfsource)) {
+            
+            if (localmode) {
+                log.info('Copying IDF to ', idflocaion);
+                file.copy(idfsource, idflocaion);
+            } else {
+                log.info('Downloading IDF ', idfsource);
+                download.file(idfsource, idflocaion)
+            }
+        } else {
+            log.warning('Warning, No IDF descriptor found');
+        }
     }
     
+    # download SDRF
+    # need to check 2 possible file types .sdrf and .seq.sdrf.txt
+    
+    sdrflocation = paste(datadir,paste(accession,'.sdrf.txt',sep=''), sep='/');
+
+    if (file.exists(sdrflocation)) {
+        log.info('Found SDRF ', sdrflocation);
+        
+    } else {
+        
+        # file not found, obtain it
+        #
+        if (localmode) {
+            sdrfsource = getAESDRFFilename(accession);
+        } else {
+            sdrfsource = getAESDRFURL(accession);
+        }
+        
+        if (!is.null(sdrfsource)) {
+            
+            if (localmode) {
+                log.info('Copying SDRF to ', sdrflocation);
+                file.copy(sdrfsource, sdrflocation);
+            } else {
+                log.info('Downloading SDRF ', sdrfsource);
+                download.file(sdrfsource, sdrflocation)
+            }
+        } else {
+            log.error('Error, No SDRF descriptor found');
+            stop();
+        }
+        
+    }
+
     return (list('sdrffname' = sdrflocation, 'idffname' = idflocaion))
 }
 
@@ -183,7 +233,8 @@ getFirstAvailableLayout <- function(layoutinfo) {
 
 
 # will create the file hierarchy in the current directory by default
-createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getwd(), refdir=getDefaultReferenceDir(), localmode = TRUE ) {
+createAEprojects <- function( accession, options = getDefaultProcessingOptions(), 
+        dir = getwd(), refdir = getDefaultReferenceDir(), localmode = TRUE ) {
     trace.enter("createAEprojects");
     on.exit({ trace.exit() })
     
@@ -191,7 +242,7 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
     
     # check if reference folder is there
     if(!file.exists(refdir)) {
-        log.info("Reference folder ",refdir," does not exist. Aborting...");
+        log.error("Reference folder ",refdir," does not exist. Aborting...");
         stop();
     }
     
@@ -219,14 +270,14 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
     resultset = mapAEtoENAviaHTTP(accession, descriptors$sdrffname);
     
     if (is.null(resultset$enaexpid)) {
-        log.info('No experiment data found. Aborting...');
+        log.error('No experiment data found. Aborting...');
         stop();
     }
     
     result = obtainENAFastQDataFiles(accession, resultset, datadir=datadir, localmode=localmode);
     
     if (!result) {
-        log.info('Error getting experiment data. Aborting...');
+        log.error('Error getting experiment data. Aborting...');
         stop();
     }
     
@@ -242,7 +293,7 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
     # project$count$feature ?? ("transcript")
     # options$count_feature         # if isoform set also countOptions as options for cufflinks
     # options$count_options
-    # options$filtering_options = ?? (getFilteringDefaultOptions())
+    # options$filtering_options = ?? (getDefaultFilteringOptions())
     
     
     expidcnt = length(resultset$enaexpid);
@@ -339,7 +390,7 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
             # check if organism was not fond
             #
             if (is.null(organism)) {
-                log.info(expidnames[i], " Organism not defined.");
+                log.error(expidnames[i], " Organism not defined.");
                 log.info("Prepare reference and anotation data for the organism.");
                 log.info("Otherwise make sure proper organism is defined in SDRF.");
                 log.info("");
@@ -432,13 +483,22 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
                         if(is.null(options$insize)) {
                             # update the insert size
                             #
-                            projects[[projname]]$pairing$insize = expNominalLength - readlength * 2;
+                            
+                            if (!is.null(expNominalLength) && !is.na(expNominalLength)) {
+                                projects[[projname]]$pairing$insize = expNominalLength - readlength * 2;
+                            } else {
+                                projects[[projname]]$pairing$insize = NULL;
+                            }
                         }
                         
                         # if size deviation 
                         # 
                         if( is.null(options$insizedev) ) {
-                            projects[[projname]]$pairing$insizedev = expNominalSdev;
+                            if (!is.null(expNominalSdev) && !is.na(expNominalSdev)) {
+                                projects[[projname]]$pairing$insizedev = expNominalSdev;
+                            } else {
+                                projects[[projname]]$pairing$insizedev = NULL;
+                            }
                         }
                         
                     }
@@ -449,7 +509,7 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
                     if ((projects[[projname]]$pairing$type == "PE" && expid$layout$name != "PAIRED") || 
                     (projects[[projname]]$pairing$type == "SR" && expid$layout$name != "SINGLE")) {
                         
-                        log.info("LAYOUT & DATA Mismatch, Data Layout: ", project0$pairing$type, 
+                        log.error("LAYOUT & DATA Mismatch, Data Layout: ", project0$pairing$type, 
                                 " Experiment Layout: ", expid$layout$name);
                         
                         stop();
@@ -475,7 +535,8 @@ createAEprojects <- function( accession, options=getAEDefaultOptions(), dir=getw
 }
 
 
-createFastQProjects <- function( accession, organism, quality, options = getAEDefaultOptions(), dir = getwd(), refdir = getDefaultReferenceDir() ) {
+createFastQProjects <- function( accession, organism, quality, 
+        options = getDefaultProcessingOptions(), dir = getwd(), refdir = getDefaultReferenceDir() ) {
     trace.enter("createFastQProjects");
     on.exit({ trace.exit() })
     
@@ -488,19 +549,19 @@ createFastQProjects <- function( accession, organism, quality, options = getAEDe
     
     # check if base folder is there
     if( !file.exists(basedir) ) {
-        log.info( "Base folder ",basedir," does not exist. Aborting..." );
+        log.error( "Base folder ",basedir," does not exist. Aborting..." );
         stop();
     }
     
     # check if reference folder is there
     if( !file.exists(refdir) ) {
-        log.info( "Reference folder ",refdir," does not exist. Aborting..." );
+        log.error( "Reference folder ",refdir," does not exist. Aborting..." );
         stop();
     }
     
     # check if data folder is there
     if( !file.exists(datadir) ) {
-        log.info( "Data folder ",datadir," does not exist. Aborting..." );
+        log.error( "Data folder ",datadir," does not exist. Aborting..." );
         stop();
     }
     
@@ -518,7 +579,10 @@ createFastQProjects <- function( accession, organism, quality, options = getAEDe
     sdrffilename = dir( datadir, pattern="sdrf", full.names = TRUE )
     
     if( length(sdrffilename) > 0 ) {
-    
+        
+        log.info( "Creating projects from SDRF file" );
+
+        
         sdrf = readSDRF( sdrffilename[1] )
         
         index1 = grep("Array.Data.File", names(sdrf@data)) # direct submission, array-based format
@@ -605,7 +669,15 @@ createFastQProjects <- function( accession, organism, quality, options = getAEDe
      
     if (length(projectnames) == 0 || length(sdrffilename) == 0) {
     
+        if (organism == "automatic") {
+            log.error( "'Automatic' organism can be used along with SDRF descriptors.");
+            log.info( "Please specify 'organism' precisely. Supported organisms:" );
+            log.info( "'", names(getSupportedOrganisms( refdir )), "'" );
+            stop();
+        }
+        
         log.info( "Creating projects from data files" );
+        
         
         # list all .fastq and .fq files
         fastqfnames = c(dir( datadir, pattern="*.fq", full.names = FALSE ), 
@@ -638,6 +710,38 @@ createFastQProjects <- function( accession, organism, quality, options = getAEDe
         organismnames = rep(organism, length(projectnames));
     }
 
+    log.info( "Found ", length(projectnames), " projects" );
+    
+    if (organism != "automatic") {
+        indices = c();
+        
+        for(org in organism) {
+            orgindices = grep(org, organismnames);
+            
+            if (length(orgindices) == 0) {
+                log.warning( "Warning, organism ", org, " not found in SDRF" );
+            } else {
+                indices = c(indices, grep(org, organismnames));
+            }
+        }
+        
+        # backup projects
+        projectnamesBackup = projectnames;
+        organismnamesBackup = organismnames;
+        
+        # correct projects
+        projectnames = projectnames[indices];
+        organismnames = organismnames[indices];
+        
+        if (length(projectnamesBackup) != length(projectnames)){
+            log.info( "Selected ", length(projectnames), " projects using organism(s) ", 
+                    paste(organism, collapse=" ") );
+            
+            log.warning( "Warning, ", length(projectnamesBackup) - length(projectnames), 
+                    " projects filtered out by organism filter and will not be computed");
+        }
+    }
+    
     
     project0 = initDefaultProject();
     
@@ -725,40 +829,87 @@ setUserOptions <- function( project, options ) {
     trace.enter("setUserOptions");
     on.exit({ trace.exit() })
     
+    log.info( "\tProcessing Options:" );
+    
+    # Strand specific
+    #
+    #
+    
     if( is.null(options$stranded) | !is.logical( options$stranded ) ) {
-        log.info( "\tStranded option not set (TRUE/FALSE value needed). Assuming the data is NOT strand-specific." );
         project$stranded = FALSE;
     } else {
         project$stranded = options$stranded;
     }
     
+    log.info( "\tStrand specific:\t",       project$stranded );
+    
+    # Reference Type
+    #
+    #
+    
+    if( is.null(options$reference) ) {
+        project$reference$type = "genome"
+    } else {
+        project$reference$type = options$reference;
+    }
+    
+    log.info( "\tReference type:\t",   project$reference$type);
+    
+    
+    # Aligner
+    #
+    #
+    
     if( is.null(options$aligner) ) {
-        log.info( "\tAligner not defined. Using tophat.");
         project$aligner$type = "tophat";
     } else {
         project$aligner$type = options$aligner;
     }
     
+    log.info( "\tAligner:\t",               project$aligner$type);
+    
+    # Aligner options
+    #
+    #
+    
+    if( is.null(options$aligner_options) ) {
+        project$aligner$options = getAlignerDefaultOptions( project$aligner$type, project$reference$type );
+        project$aligner$override_options = FALSE;
+    } else {
+        project$aligner$options = options$aligner_options;
+        project$aligner$override_options = TRUE;
+    }
+    
+    log.info( "\tAligner options:\t");
+    for(optname in names(project$aligner$options)) {
+        log.info( "\t\t", optname, " = ", project$aligner$options[[optname]]);
+    }
+    
+    # Insert Size
+    #
+    #
+    
     # warn only for tophat because bwa and bowtie estimate these values automatically
     if(!is.null(options$insize)) {
         project$pairing$insize = options$insize;
+        log.info( "\tInsert size:\t", project$pairing$insize);
     } else if((project$aligner$type != "bwa") & (project$aligner$type != "bowtie")) {
-        log.info( "\tInsert size not defined. The default parameter for TopHat will be used." )    
+        log.info( "\tInsert size:\t", "Not defined. Assuming: ", "(default parameter for TopHat)");
     }
+    
+    
+    # Insert Size Deviation
+    #
+    #
     
     # warn only for aligners other than bwa because bwa estimates this values automatically
-    if( is.null(options$insizedev) & (project$aligner$type != "bwa") )
-        log.info( "\tInsert size deviation not defined. The default parameter for Bowtie or TopHat will be used." )
-    else {
+    if( is.null(options$insizedev) & (project$aligner$type != "bwa") ) {
+        log.info( "\tInsert stdev:\t", "Not defined. Assuming: ", "(default parameter for TopHat)");
+    } else {
         project$pairing$insizedev = options$insizedev;
+        log.info( "\tInsert stdev:\t", project$pairing$insizedev);
     }
     
-    if( is.null(options$reference) ) {
-        project$reference$type = "genome"
-        log.info( "\tReference type not defined. Assuming: ", project$reference$type);
-    } else {
-        project$reference$type = options$reference
-    }
     
     #if( is.null(options$reference_version) ) {
     #    project$reference$version = getCurrentRefVersion( project )
@@ -767,56 +918,79 @@ setUserOptions <- function( project, options ) {
     #    project$reference$version = options$reference_version[project$organism]
     #}
     
-    if( is.null(options$aligner_options) ) {
-        project$aligner$options = getAlignerDefaultOptions( project$aligner$type, project$reference$type );
-
-        project$aligner$override_options = FALSE;
-    } else {
-        project$aligner$options = options$aligner_options;
-        project$aligner$override_options = TRUE;
-    }
+    # Count Method
+    #
+    #
     
     if( is.null(options$count_method) ) {
         project$count$method = "cufflinks"
-        log.info( "\tCount method not defined. Assuming: ", project$count$method);
     } else {
         project$count$method = options$count_method
     }
     
+    log.info( "\tCount method:\t",     project$count$method);
+
+    
+    # Count Feature & Count options
+    #
+    #
+    
     if( is.null(options$count_feature) ) {
         project$count$feature = "transcript";
-        log.info( "\tFeature of interest not defined. Assuming: ", project$count$feature);
     } else {
         project$count$feature = options$count_feature;         # if transcript set also countOptions as options for cufflinks
         project$count$options = options$count_options;
     }
 
+    log.info( "\tFeature to count:\t", project$count$feature);
+    log.info( "\tCount options:\t",    project$count$options);
+
+    # N11n (Normalization)
+    #
+    #
+    
     if( is.null(options$normalisation) ) {
-        project$count$normalisation = "none"
-        log.info( "\tNormalisation not defined. Assuming: ", project$count$normalisation);
+        project$count$normalisation = "rpkm"
     } else {
-        project$count$normalisation = options$normalisation
+        project$count$normalisation = options$normalisation;
     }
     
+    log.info( "\tNormalisation:\t",       project$count$normalisation);
+    
+    # S13n (Standartisation)
+    # 
+    #
+    
     if( is.null(options$standardise) ) {
-        project$count$standardise = FALSE 
-        log.info( "\tStandardisation not defined. Assuming: ", project$count$standardise);
+        project$count$standardise = FALSE;
     } else {
         project$count$standardise = options$standardise
     }
     
-    if( is.null(options$normalisation) ) {
-        project$count$normalisation = "rpkm"
-        log.info( "\tFeature of interest not defined. Assuming: ", project$count$normalisation);
-    } else {
-        project$count$normalisation = options$normalisation
-    }
+    log.info( "\tStandardisation:\t",     project$count$standardise);
+    
+    
+    # Filtering
+    #
+    #
     
     if( is.null(options$filtering_options) ) {
-        project$filtering_options = getFilteringDefaultOptions()
+        project$filtering_options = getDefaultFilteringOptions()
     } else {
-        project$filtering_options = options$filtering_options
+        project$filtering_options = mergeOptions(getDefaultFilteringOptions(), options$filtering_options);
     }
+    
+    project$filter = options$filter;
+
+    log.info( "\tFiltering :\t",          project$filter);
+    log.info( "\tFiltering optons:");
+    for(optname in names(project$filtering_options)) {
+        log.info( "\t\t", optname, " = ", project$filtering_options[[optname]]);
+    }
+    
+    # Validation
+    #
+    #
     
     if( project$count$method == "mmseq" && !(project$aligner$type %in% c("tophat", "bowtie")) ) {
         log.info( "MMSEQ can only be used with the output of Tophat or Bowtie" );
@@ -846,8 +1020,11 @@ fixedOptions <- function( project ) {
     trace.enter("fixedOptions");
     on.exit({ trace.exit() })
     
-    project$aligner$threads = 16
-    project$aligner$files = c( "accepted_hits.sam", "accepted_hits.filt.sorted.bam", "accepted_hits.sortednames.bam" )
+    project$aligner$threads = 16;
+    
+    # stable version workflow
+    # new version
+    project$aligner$files = c( "accepted_hits.bam", "accepted_hits.filt.sorted.bam", "accepted_hits.sortednames.bam" )
     
     project$aligner$bamtags = c(  
     # SAM format defined tags, 
@@ -931,32 +1108,24 @@ fixedOptions <- function( project ) {
     return( project )
 }
 
-checkFiles <- function( filename ) {
-    trace.enter("checkFiles");
+getDefaultProcessingOptions <- function() {
+    trace.enter("getDefaultProcessingOptions");
     on.exit({ trace.exit() })
     
-    if( !file.exists(filename) )
-    log.info( "\tCONFIG WARNING: couldn't find ", filename, "" )
-    else
-    log.info( "\tUsing ", filename, "" )
-}
+    options = list( 
+            stranded              = FALSE,
+            insize                = NULL,
+            insizedev             = NULL,
+            reference             = "genome",
+            aligner               = "tophat",
+            aligner_options       = NULL,
+            count_feature         = "transcript",
+            count_options         = "",
+            count_method          = "cufflinks",
+            filter                = TRUE,
+            standardise           = FALSE,
+            normalisation         = "rpkm")
 
-getAEDefaultOptions <- function() {
-    trace.enter("getAEDefaultOptions");
-    on.exit({ trace.exit() })
-    
-    options=list( 
-        stranded              = FALSE, 
-        insize                = NULL, 
-        reference             = "genome", 
-        aligner               = "tophat", 
-        aligner_options       = NULL, 
-        count_feature         = "transcript", 
-        count_options         = "", 
-        count_method          = NULL, 
-        filtering_options     = NULL );
-      
-      #"FastqQuality"
     return( options )
 }
 
@@ -972,13 +1141,20 @@ mergeOptions <- function(baseoptions, newoptions) {
 }
 
 
-getFilteringDefaultOptions <- function() {
-    trace.enter("getFilteringDefaultOptions");
+getDefaultFilteringOptions <- function() {
+    trace.enter("getDefaultFilteringOptions");
     on.exit({ trace.exit() })
     
-    opt = list( mismatches=2, chr_ignore=c("MT"), minqual=10, minmapq=1, maxN=2, 
-    maxpol=0.75,                             # either a proportion (<0) or an integer
-    duplicates="remove", multihits="remove", gapped="remove")    # either keep or remove
+    opt = list( 
+            mismatches = 2, 
+            chr_ignore = c("MT"), 
+            minqual    = 10, 
+            minmapq    = 1, 
+            maxN       = 2, 
+            maxpol     = 0.75,         # either a proportion (<0) or an integer
+            duplicates = "remove", 
+            multihits  = "remove", 
+            gapped     = "remove")     # either "keep" or "remove"
     return( opt )
 }
 

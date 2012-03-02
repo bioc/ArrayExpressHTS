@@ -62,9 +62,6 @@ create_feature_data <- function( gtf, tids ) {
     metaData <- data.frame(labelDescription=c("Chromosome", "Gene Id", 
                     "Gene Name", "Transcript Name", "Transcript Length", "Protein Id"));
     
-    #dd = new("AnnotatedDataFrame", data=df, varMetadata=metaData);
-    
-    #featureData(eset) = new("AnnotatedDataFrame", data=df, varMetadata=metaData);
     fd = new("AnnotatedDataFrame", data=df, varMetadata=metaData);
     return( fd ) 
 }
@@ -85,18 +82,35 @@ exprs_table_to_dataframe <- function() {
             ctab[[project$name]] = read.table( cfilename, header = TRUE, stringsAsFactors = FALSE )
             
             if( project$count$method == "mmseq" ) {
+                # 
+                #
                 colnames(ctab[[project$name]])[c(1,3)] = c( "id", "estimate" )
             } else if( project$count$method == "cufflinks" ) {
-                if( project$count$feature == "transcript" )
-                    colnames(ctab[[project$name]])[c(1,6,11,12)] = c( "id", "estimate", "coverage", "length" )
-                else 
-                    colnames(ctab[[project$name]])[c(1,6)] = c( "id", "estimate" )
+                if( project$count$feature == "transcript" ) {
+                    
+                    # fetch transcript info
+                    #
+                    
+                    # new workflow
+                    #
+                    colnames(ctab[[project$name]])[c(1,8,9,10)] = c( "id", "length", "coverage", "estimate" )
+                    
+                } else {
+                    
+                    # fetch genes info
+                    #
+                    
+                    # new workflow
+                    #
+                    colnames(ctab[[project$name]])[c(1,8,9,10)] = c( "id", "length", "coverage", "estimate" )
+                }
+                    
             } else {
                 colnames(ctab[[project$name]]) = c( "id", "estimate", "length" )
             }
             tids = unique( c(tids, ctab[[project$name]][,"id"]) )
         } else {
-            log.info(project$name, " warning: ", cfilename, " not found")
+            log.warning(project$name, " warning: ", cfilename, " not found")
             ctab[[project$name]] = NULL
         }
         i = i+1
@@ -228,6 +242,52 @@ getMatchedText <- function( pattern, string ) {
 }
 
 
+fixReferenceDoubleY <- function( reffname ) {
+    
+    log.info("Fixing Reference ", reffname);
+    
+    # check if file is there
+    #
+    if (!file.exists(reffname)) {
+        log.info("Reference Not Found ", reffname);
+        return();
+    }
+    
+    lines001 = system(paste("grep -rn '>Y' ", reffname, sep=""), intern=TRUE);
+    
+    # check if fix is required
+    #
+    
+    if (length(lines001) > 1) {
+        
+        # backup
+        #
+        log.info("Backing Up To ", reffname, ".backup" );
+        
+        system(paste("cp ", reffname, " ", reffname, ".backup", sep=""));
+        
+        # fix the reference
+        #
+        
+        index001 = index001 = regexpr(":", lines001)
+        
+        start1 = substr(lines001[1],1, index001[1]-1);
+        start2 = substr(lines001[2],1, index001[2]-1);
+        
+        log.info("Removing Double Y Range ", start1, " - ", as.integer(start2) - 1);
+        
+        cmd001 = paste("sed -i ", start1, ",", as.integer(start2) - 1, "d ", reffname, sep="");
+        
+        system(cmd001);
+        
+        log.info("Reference Fixed");
+        
+    } else {
+        
+        log.info("Reference is OK");
+    }
+}
+
 #getEnsemblReference( organism = "Homo_sapiens", type="transcriptome", version="current", location="/ebi/microarray/home/angela/seq/" )
 
 getEnsemblReference <- function( organism, type, version, location, run = FALSE, refresh = FALSE ) {
@@ -263,10 +323,12 @@ getEnsemblReference <- function( organism, type, version, location, run = FALSE,
         cmds = c( cmds, paste( "mkdir ", reference_dir, sep="" ) )
     }
     
+    dirlist = paste(organism, ".dirlist.txt", sep="");
+    
     if( type == "genome" ) {
-        cmds = c( cmds, paste( "curl -s -l ", ensembl_path, "/ | grep toplevel.fa > dirlist.txt", sep="" ) )
+        cmds = c( cmds, paste( "curl -s -l ", ensembl_path, "/ | grep toplevel.fa > ", dirlist, sep="" ) )
     } else {
-        cmds = c( cmds, paste( "curl -s -l ", ensembl_path, "/ | grep all.fa > dirlist.txt", sep="" ) )
+        cmds = c( cmds, paste( "curl -s -l ", ensembl_path, "/ | grep all.fa > ", dirlist, sep="" ) )
     }
     
     # run commands:
@@ -277,7 +339,7 @@ getEnsemblReference <- function( organism, type, version, location, run = FALSE,
     
     cmds = c()
     
-    ftpfile = read.table( "dirlist.txt", stringsAsFactors = FALSE )[1,1]
+    ftpfile = read.table( dirlist, stringsAsFactors = FALSE )[1,1]
     
     version = substr( ftpfile, nchar(organism)+2, regexpr(ty,ftpfile)-2 )
     
@@ -325,6 +387,26 @@ getEnsemblReference <- function( organism, type, version, location, run = FALSE,
         
         cmds = c()
         log.info( "Reference saved to ", reference_dir, "/", organism_ver )
+        
+        # Homo_sapiens have 2 PAR regions in Y and X chromosomes 
+        # that are very similar. Ensembl didn't find anything more 
+        # clever to do other than to remove the PARs from Y chromosome.
+        # This removal resulted in that "Y" was split into 2 parts, 
+        # which is fine to aligners, but cufflinks doesn't "understand" it.
+        #
+        #
+        # The first part is the leading telomere, which has all Ns and 
+        # is not used in alignment. We will cut it off from the reference. 
+        #
+        # The second part is the actual Y chromosolme, what's left of it.
+        #
+        if (organism == "Homo_sapiens") {
+            
+            # remove the empty Y region from the reference
+            #
+            fixReferenceDoubleY( paste(reference_folder, "/", filename, sep="") );
+        }
+        
     }
     
     return( version )
@@ -359,10 +441,12 @@ getEnsemblAnnotation <- function( organism, version, location, run = FALSE, refr
         cmds = c( cmds, paste( "mkdir ", reference_dir, sep="" ) )
     }
     
+    dirlist = paste(organism, ".dirlist.txt", sep="");
+    
     # if version is current, the actual filename will be unknown
     # we're finding out the actual filename here
     #
-    cmds = c( cmds, paste( "curl -s -l ", ensembl_path, "/ | grep gtf.gz > dirlist.txt", sep="" ) )
+    cmds = c( cmds, paste( "curl -s -l ", ensembl_path, "/ | grep gtf.gz > ", dirlist, sep="" ) )
     
     run_cmds( cmds, run )
     
@@ -370,7 +454,7 @@ getEnsemblAnnotation <- function( organism, version, location, run = FALSE, refr
     
     # read the file
     #
-    ftp_filename = read.table( "dirlist.txt", stringsAsFactors = FALSE )[1,1]
+    ftp_filename = read.table( dirlist, stringsAsFactors = FALSE )[1,1]
     
     # update the version
     #
@@ -544,16 +628,6 @@ indexReference <- function( organism, type, version, location, aligner, refresh 
             run_cmds( cmds, run )
             cmds = c()
             
-            # fix double chromosome issue
-            #
-            faifname = paste(index_file, ".fai", sep="");
-            
-            if (file.exists(faifname)) {
-                fixReference( faifname );
-            } else {
-                log.info(faifname, " Not Found");
-            }
-            
             log.info( "Indexes saved to ", location )
         }
     } else if( aligner == "bwa" ) {
@@ -587,16 +661,6 @@ indexReference <- function( organism, type, version, location, aligner, refresh 
             cmds = c( cmds, paste( "ln ", location,  "/", gen_dir, "/", ref_dir, "/", filename, " .", sep="" ) )
             run_cmds( cmds, run )
             cmds = c()
-            
-            # fix double chromosome issue
-            #
-            faifname = paste(index_file, ".fai", sep="");
-            
-            if (file.exists(faifname)) {
-                fixReference( faifname );
-            } else {
-                log.info(faifname, " Not Found");
-            }
             
             log.info( "Indexes saved to ", location )
         }
@@ -984,7 +1048,7 @@ gtf_to_dataframe <- function( filename, names=c( "gene_id", "transcript_id", "ex
     curp = perc;
     
     for( line in splitat ) {
-        #progress( count*100/length(splitat) )
+
         pairs = strsplit(sub("^ ", "", line), " ")
         for( pair in pairs )
             attribs[[pair[1]]][count] = pair[2]

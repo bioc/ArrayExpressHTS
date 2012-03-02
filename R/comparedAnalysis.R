@@ -71,7 +71,7 @@ read_gtf <- function( filename ) {
         # column names of processed annotation file
         # 
         col.names = c( "chr", "source", "feature", "start", "end", "score", "strand", "phase", "gene_id", 
-            "transcript_id", "exon_number", "gene_name", "transcript_name", "protein_id"  )
+            "transcript_id", "exon_number", "gene_name", "transcript_name", "protein_id", "gene_biotype"  )
         
         gtf = read.table( filename, fill = TRUE,
             col.names = col.names, sep="\t", strip.white = TRUE, stringsAsFactors = FALSE )
@@ -121,6 +121,8 @@ to_expressionset <- function( update = FALSE, filter = TRUE ) {
         length = res$length 
         eset = new("ExpressionSet", exprs = data)
         
+        # attach experiment data
+        #
         idffname = dir( .projects[[1]]$datadir, ".idf", full.names = TRUE )[1]
         
         if (file.exists(idffname)) {
@@ -128,6 +130,8 @@ to_expressionset <- function( update = FALSE, filter = TRUE ) {
             #experimentData(eset) = readIDF(idffname);
         }
         
+        # attach phenoData
+        #
         sdrffname = dir( .projects[[1]]$datadir, ".sdrf", full.names = TRUE )[1]
         
         if (file.exists(sdrffname)) {
@@ -140,6 +144,15 @@ to_expressionset <- function( update = FALSE, filter = TRUE ) {
            
             phenoData(eset) = sdrf;
         }
+        
+        # attach .projects
+        # reference organism and version are 
+        # stored in projects per each project
+        #
+        attr(eset, 'projects') = .projects;
+        
+        # read annotation
+        #
         
         gtf = attr(.projects, 'metadata')$gtf;
         
@@ -179,7 +192,7 @@ to_expressionset <- function( update = FALSE, filter = TRUE ) {
         }
 
         if( .projects[[1]]$count$method == "cufflinks" ) { # TODO solve and remove this error
-            log.info( "WARNING! cufflinks estimates are returned as FPKMs" );
+            log.info( "*** Please note that cufflinks estimates are returned as FPKMs ***" );
         } else {
             if( .projects[[1]]$count$method == "mmseq" ) {
                 if( .projects[[1]]$count$standardise || .projects[[1]]$count$normalisation != "none" ) {
