@@ -227,7 +227,8 @@ locateInToolBase <- function(toolname, toolpath, toolbase) {
 
 locateInSystem <- function(toolname) {
     
-    toolpath = system(paste("which ", toolname, sep=""), intern=TRUE, ignore.stderr=TRUE);
+    toolpath = suppressWarnings(system(paste("which ", toolname, sep=""),
+        intern=TRUE, ignore.stderr=TRUE));
     
     if (length(toolpath) > 0) {
         #return(toolpath);
