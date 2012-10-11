@@ -20,9 +20,24 @@ obtainENAFastQDataFiles <- function( accession, resultset, datadir, localmode = 
     
     for (i in 1:length(fastQs)) { 
         if (is.null(fastQs[[i]])) { 
-            log.warning('Warning: no runs available for ', names(fastQs[i])); 
+            
+            # register step status
+            #
+            registerExpStepWarning(METADATA_SANITY, 
+                    'No runs available for ', names(fastQs[i]));
+            
         }
     }
+    
+    # clean data folder
+    incompleteFastQs = dir(datadir, pattern="fastq.gz");
+    
+    for(fname00 in incompleteFastQs) {
+        log.info("cleaning ", fname00);
+        
+        suppressWarnings( file.remove( paste(datadir,"/",fname00, sep="") ) );
+    }
+    
     
     for(fastq in unlist(fastQs)) {
         
@@ -54,9 +69,12 @@ obtainENAFastQDataFiles <- function( accession, resultset, datadir, localmode = 
                 result = system(cmd);
                 
                 if (result != 0) {
-                    log.error('Error copying ', fastqpath, ' to ', destfile);
+                    # register step status
+                    #
+                    registerExpStepFailure(OBTAINING_RAWDATA, 
+                            'Failed copying ', fastqpath, ' to ', destfile);
                     
-                    return(FALSE);
+                    stop();
                 }
                 
             } else {
@@ -69,9 +87,12 @@ obtainENAFastQDataFiles <- function( accession, resultset, datadir, localmode = 
                 result0 = try(download.file(url = url, destfile = destfile, quiet = TRUE), silent = FALSE);
                 
                 if (inherits(result0, 'try-error')) {
-                    log.error('Error downloading ', url, ' to ', destfile);
+                    # register step status
+                    #
+                    registerExpStepFailure(OBTAINING_RAWDATA, 
+                            'Failed downloading ', url, ' to ', destfile);
                     
-                    return(FALSE);
+                    stop();
                 }
                 
             }
@@ -83,9 +104,12 @@ obtainENAFastQDataFiles <- function( accession, resultset, datadir, localmode = 
             result = system(cmd);
             
             if (result != 0) {
-                log.error('Error unzipping ', destfile);
+                # register step status
+                #
+                registerExpStepFailure(OBTAINING_RAWDATA, 
+                        'Failed unzipping ', destfile);
                 
-                return(FALSE);
+                stop();
             }
         }
     }
@@ -103,63 +127,84 @@ getExperimentDescriptors <- function( accession, datadir, localmode = TRUE ) {
     #
     idflocaion = paste(datadir,paste(accession,'.idf.txt',sep=''), sep='/');
     
-    if (file.exists(idflocaion)) {
-        log.info('Found IDF ', idflocaion);
+    
+    if (localmode) {
+        idfsource = getAEIDFFilename(accession);
     } else {
+        idfsource = getAEIDFURL(accession);
+    }
+    
+    if (!is.null(idfsource)) {
+        
+        # remove the file
+        unlink(idflocaion);
         
         if (localmode) {
-            idfsource = getAEIDFFilename(accession);
-        } else {
-            idfsource = getAEIDFURL(accession);
-        }
-        
-        if (!is.null(idfsource)) {
+            log.info('Copying IDF to ', idflocaion);
+            file.copy(idfsource, idflocaion, overwrite = TRUE);
             
-            if (localmode) {
-                log.info('Copying IDF to ', idflocaion);
-                file.copy(idfsource, idflocaion);
-            } else {
-                log.info('Downloading IDF ', idfsource);
-                download.file(idfsource, idflocaion)
-            }
+            # fix permissions
+            Sys.chmod(idflocaion, "664");
         } else {
-            log.warning('Warning, No IDF descriptor found');
+            log.info('Downloading IDF ', idfsource);
+            download.file(idfsource, idflocaion)
         }
+    } else {
+        # register step status
+        #
+        registerExpStepWarning(OBTAINING_METADATA, 
+                'No IDF descriptor found.');
+        
     }
+    
+    
+    #if (file.exists(idflocaion)) {
+    #    log.info('Found IDF ', idflocaion);
+    #} else {
+    #}
     
     # download SDRF
     # need to check 2 possible file types .sdrf and .seq.sdrf.txt
     
     sdrflocation = paste(datadir,paste(accession,'.sdrf.txt',sep=''), sep='/');
 
-    if (file.exists(sdrflocation)) {
-        log.info('Found SDRF ', sdrflocation);
-        
+    
+    if (localmode) {
+        sdrfsource = getAESDRFFilename(accession);
     } else {
-        
-        # file not found, obtain it
-        #
-        if (localmode) {
-            sdrfsource = getAESDRFFilename(accession);
-        } else {
-            sdrfsource = getAESDRFURL(accession);
-        }
-        
-        if (!is.null(sdrfsource)) {
-            
-            if (localmode) {
-                log.info('Copying SDRF to ', sdrflocation);
-                file.copy(sdrfsource, sdrflocation);
-            } else {
-                log.info('Downloading SDRF ', sdrfsource);
-                download.file(sdrfsource, sdrflocation)
-            }
-        } else {
-            log.error('Error, No SDRF descriptor found');
-            stop();
-        }
-        
+        sdrfsource = getAESDRFURL(accession);
     }
+    
+    if (!is.null(sdrfsource)) {
+        
+        # remove the file
+        unlink(sdrflocation);
+        
+        if (localmode) {
+            log.info('Copying SDRF to ', sdrflocation);
+            file.copy(sdrfsource, sdrflocation, overwrite = TRUE);
+            
+            # fix permissions
+            Sys.chmod(idflocaion, "664");
+        } else {
+            log.info('Downloading SDRF ', sdrfsource);
+            download.file(sdrfsource, sdrflocation)
+        }
+    } else {
+        # register step status
+        #
+        registerExpStepFailure(OBTAINING_METADATA, 
+                'No SDRF descriptor found');
+        
+        stop();
+    }
+    
+    
+    #if (file.exists(sdrflocation)) {
+    #    log.info('Found SDRF ', sdrflocation);
+    #    
+    #} else {
+    #}
 
     return (list('sdrffname' = sdrflocation, 'idffname' = idflocaion))
 }
@@ -233,67 +278,77 @@ getFirstAvailableLayout <- function(layoutinfo) {
 
 
 # will create the file hierarchy in the current directory by default
-createAEprojects <- function( accession, options = getDefaultProcessingOptions(), 
+createAEprojects <- function( accession, options = getDefaultProcessingOptions(),
         dir = getwd(), refdir = getDefaultReferenceDir(), localmode = TRUE ) {
+    
     trace.enter("createAEprojects");
-    on.exit({ trace.exit() })
+    on.exit({ trace.exit() });
     
     projects = list();
     
     # check if reference folder is there
     if(!file.exists(refdir)) {
-        log.error("Reference folder ",refdir," does not exist. Aborting...");
+        # register step status
+        #
+        registerExpStepFailure(PARAMETER_SANITY, 
+                "Reference folder ",refdir," does not exist.");
+        
         stop();
     }
+    
+    # normalize paths
+    dir = normalizePath(dir);
+    refdir = normalizePath(refdir);
+    
+    # register step status
+    #
+    registerExpStepStarted(OBTAINING_METADATA);
+    registerExpStepStarted(METADATA_SANITY);
+    
     
     # after checking reference folder
     # load & cache all supported organisms
     #
-    # by the way, loading organisms from the reference folder 
-    # instaed of using hardcoded names was a good idea! :)
-    # 
-    # and thanks for reading comments..
     
-    scanSupportedOrganisms(refdir);    
+    scanSupportedOrganisms(refdir);
     
     resultset = NULL;
     
     # define folders
-    basedir = paste( dir, accession, sep="/");
-    datadir = paste( basedir, "data", sep="/" );
+    basedir = setupBaseFolder(accession, dir, getSubmID());
+    psrdir  = setupPSRFolder(accession, dir, getSubmID());
+    datadir = setupDataFolder(accession, dir);
     
-    dir.create(basedir,showWarnings = FALSE);
-    dir.create(datadir, showWarnings = FALSE);
-    
-    descriptors = getExperimentDescriptors(accession, datadir=datadir, localmode=localmode);
-    
-    resultset = mapAEtoENAviaHTTP(accession, descriptors$sdrffname);
+    descriptors = getExperimentDescriptors( accession, datadir = datadir, localmode = localmode );
+    resultset   = mapAEtoENAviaHTTP( accession, descriptors$sdrffname );
     
     if (is.null(resultset$enaexpid)) {
-        log.error('No experiment data found. Aborting...');
+        # register step status
+        #
+        registerExpStepFailure(METADATA_SANITY, 
+                'No experiment data found.');
+
         stop();
     }
+    
+    # register step status
+    #
+    registerExpStepStarted(OBTAINING_RAWDATA);
     
     result = obtainENAFastQDataFiles(accession, resultset, datadir=datadir, localmode=localmode);
     
     if (!result) {
-        log.error('Error getting experiment data. Aborting...');
+        # register step status
+        #
+        registerExpStepFailure(OBTAINING_RAWDATA, 
+                'Failed to obtain experiment raw data.');
+        
         stop();
     }
     
-    # options$stranded = TRUE/FALSE (FALSE)
-    # options$aligner = "tophat"| "bwa" ("tophat")
-    # options$insize = ?? (aligner default)
-    # options$insizedev = ?? (aligner default)
-    # options$reference = "genome" | ?? ("genome")
-    # options$reference_version = ?? (getCurrentRefVersion( project$organism )) : TODO: check possibly a bug here
-    # options$aligner_options = ?? (getAlignerDefaultOptions( project$aligner$type, project$reference$type )
-    #            project$aligner$override_options = TRUE
-    # options$count_method = "cufflinks" | ?? ("cufflinks")
-    # project$count$feature ?? ("transcript")
-    # options$count_feature         # if isoform set also countOptions as options for cufflinks
-    # options$count_options
-    # options$filtering_options = ?? (getDefaultFilteringOptions())
+    # register step status
+    #
+    registerExpStepCompleted(OBTAINING_RAWDATA);
     
     
     expidcnt = length(resultset$enaexpid);
@@ -312,7 +367,11 @@ createAEprojects <- function( accession, options = getDefaultProcessingOptions()
         expid = resultset$enaexpid[[i]];
         
         if (is.null(expid$enafastq)) {
-            log.info(expidnames[i], " No ENA data found ");
+            
+            # register step status
+            #
+            registerExpStepWarning(METADATA_SANITY, expidnames[i], " No ENA data found ");
+            
         } else {
             log.info(expidnames[i]);
             log.info('   RUNID:', expid$enarunid);
@@ -349,11 +408,22 @@ createAEprojects <- function( accession, options = getDefaultProcessingOptions()
                     organism = ena.organism;
                 
                 } else {
-                    log.info(expidnames[i], " Organism specified in ENA ", ena.organism," is not supported");
+                    
+                    # register step status
+                    #
+                    registerExpStepWarning(METADATA_SANITY, 
+                            expidnames[i], " Organism specified in ENA ", 
+                            ena.organism," is not supported");
+                    
                 }
                 
             } else {
-                log.info(expidnames[i], " No organism found in ENA");
+                
+                # register step status
+                #
+                registerExpStepWarning(METADATA_SANITY, 
+                        expidnames[i], " No organism found in ENA");
+                
             }
             
             # if ENA has no organism defined, 
@@ -379,23 +449,40 @@ createAEprojects <- function( accession, options = getDefaultProcessingOptions()
                         organism = sdrf.organism;
                     
                     } else {
-                        log.info(expidnames[i], " Organism in SDRF ", sdrf.organism," is not supported");
+                        
+                        # register step status
+                        #
+                        registerExpStepWarning(METADATA_SANITY, 
+                                expidnames[i], " Organism in SDRF ", 
+                                sdrf.organism," is not supported");
+                        
                     }
                     
                 } else {
-                    log.info(expidnames[i], " No organism found in SDRF" );
+                    # register step status
+                    #
+                    registerExpStepWarning(METADATA_SANITY, 
+                            expidnames[i], " No organism found in SDRF");
+                    
                 }
             }
             
             # check if organism was not fond
             #
             if (is.null(organism)) {
-                log.error(expidnames[i], " Organism not defined.");
+                
+                # register step status
+                #
+                log.info(expidnames[i], " Organism not defined.");
                 log.info("Prepare reference and anotation data for the organism.");
                 log.info("Otherwise make sure proper organism is defined in SDRF.");
                 log.info("");
                 log.info("Supported organisms:" );
                 log.info(paste("'", names(getSupportedOrganisms( refdir )), "' ", sep=''));
+                
+                registerExpStepFailure(REFERENCE_SANITY, 
+                        expidnames[i], " Organism not defined.");
+                
                 stop();
             }
             
@@ -408,6 +495,7 @@ createAEprojects <- function( accession, options = getDefaultProcessingOptions()
             
             # init default project
             #
+            project0$psrdir = psrdir;
             project0$basedir = basedir;
             project0$datadir = datadir;
             project0$refdir = refdir;
@@ -457,9 +545,12 @@ createAEprojects <- function( accession, options = getDefaultProcessingOptions()
                             explayoutinfo = expid$layout$info
                         
                         } else {
-                            # no layout info for this experiment
+                            
+                            # register step status
                             #
-                            log.info( projname, " NO LAYOUT INFO ")
+                            registerExpStepWarning(METADATA_SANITY, 
+                                    projname, " NO LAYOUT INFO ");
+                            
                             
                             if (!is.null(availablelayoutinfo)) {
                                 
@@ -509,8 +600,11 @@ createAEprojects <- function( accession, options = getDefaultProcessingOptions()
                     if ((projects[[projname]]$pairing$type == "PE" && expid$layout$name != "PAIRED") || 
                     (projects[[projname]]$pairing$type == "SR" && expid$layout$name != "SINGLE")) {
                         
-                        log.error("LAYOUT & DATA Mismatch, Data Layout: ", project0$pairing$type, 
-                                " Experiment Layout: ", expid$layout$name);
+                        # register step status
+                        #
+                        registerExpStepFailure(METADATA_SANITY, 
+                                "LAYOUT & DATA Mismatch, Data Layout: ", 
+                                project0$pairing$type, " Experiment Layout: ", expid$layout$name);
                         
                         stop();
                     }
@@ -524,12 +618,19 @@ createAEprojects <- function( accession, options = getDefaultProcessingOptions()
     
     metadata = list();
     
+    metadata$psrdir = psrdir;
     metadata$basedir = basedir;
     metadata$datadir = datadir;
     metadata$refdir = refdir;
     metadata$resultset = resultset;
     
     attr(projects, 'metadata') = metadata;
+    
+    # register step status
+    #
+    registerExpStepCompleted(OBTAINING_METADATA);
+    registerExpStepCompleted(METADATA_SANITY);
+    
     
     return(projects);
 }
@@ -543,27 +644,32 @@ createFastQProjects <- function( accession, organism, quality,
     # define projects
     projects = list()
     
-    # define folders
-    basedir = paste( dir, accession, sep="/");
-    datadir = paste( basedir, "data", sep="/" );
+    # register step status
+    #
+    registerExpStepStarted(OBTAINING_METADATA);
+    registerExpStepStarted(METADATA_SANITY);
     
-    # check if base folder is there
-    if( !file.exists(basedir) ) {
-        log.error( "Base folder ",basedir," does not exist. Aborting..." );
-        stop();
-    }
+    # normalize paths
+    dir = normalizePath(dir);
+
+    
+    # define folders
+    basedir = setupBaseFolder(accession, dir, getSubmID());
+    psrdir  = setupPSRFolder(accession, dir, getSubmID());
+    datadir = setupDataFolder(accession, dir);
     
     # check if reference folder is there
     if( !file.exists(refdir) ) {
-        log.error( "Reference folder ",refdir," does not exist. Aborting..." );
+        # register step status
+        #
+        registerExpStepFailure(PARAMETER_SANITY, 
+                "Reference folder ",refdir," does not exist.");
+        
         stop();
     }
     
-    # check if data folder is there
-    if( !file.exists(datadir) ) {
-        log.error( "Data folder ",datadir," does not exist. Aborting..." );
-        stop();
-    }
+    # normalize reference folder
+    refdir = normalizePath(refdir);
     
     # create projects
     #
@@ -662,7 +768,12 @@ createFastQProjects <- function( accession, organism, quality,
         }
         
         if (length(projectnames) == 0) {
-            log.info("Cannot determine projects from SFRF");
+            
+            # register step status
+            #
+            registerExpStepWarning(METADATA_SANITY, 
+                    projname, "Cannot determine projects from SFRF");
+            
         }
         
     }
@@ -670,9 +781,15 @@ createFastQProjects <- function( accession, organism, quality,
     if (length(projectnames) == 0 || length(sdrffilename) == 0) {
     
         if (organism == "automatic") {
-            log.error( "'Automatic' organism can be used along with SDRF descriptors.");
+            # register step status
+            #
+            log.info( "'Automatic' organism can be used along with SDRF descriptors.");
             log.info( "Please specify 'organism' precisely. Supported organisms:" );
             log.info( "'", names(getSupportedOrganisms( refdir )), "'" );
+            
+            registerExpStepFailure(PARAMETER_SANITY, 
+                    "No SDRF, cannot use 'automatic' organism. Please specify it.");
+            
             stop();
         }
         
@@ -684,15 +801,27 @@ createFastQProjects <- function( accession, organism, quality,
         dir( datadir, pattern="*.fastq", full.names = FALSE ));
         
         if( length(fastqfnames) == 0 ) {
-            log.info( "No .fastq or .fq file found in ", datadir," Aborting..." );
+            
+            # register step status
+            #
+            registerExpStepFailure(OBTAINING_RAWDATA, 
+                    "No .fastq or .fq file found in ", datadir);
+            
             stop();
         }
         
         if (!isOrganismSupported(organism, refdir)) {
-            log.info( "Organism '", organism,"' is not supported. Supported organisms are " );
+            
+            # register step status
+            #
+            log.info( "Organism '", organism,"' is not supported." );
+            log.info( "Supported organisms are: " );
             log.info( "'", names(getSupportedOrganisms( refdir )), "'" );
-            #log.info( " Aborting..." );
-            #stop();
+            
+            registerExpStepFailure(OBTAINING_METADATA, 
+                    "Organism '", organism,"' is not supported.");
+            
+            stop();
         }
         
         # get organism version
@@ -719,7 +848,12 @@ createFastQProjects <- function( accession, organism, quality,
             orgindices = grep(org, organismnames);
             
             if (length(orgindices) == 0) {
-                log.warning( "Warning, organism ", org, " not found in SDRF" );
+                
+                # register step status
+                #
+                registerExpStepWarning(METADATA_SANITY, 
+                        "Warning, organism ", org, " not found in SDRF");
+                
             } else {
                 indices = c(indices, grep(org, organismnames));
             }
@@ -737,8 +871,12 @@ createFastQProjects <- function( accession, organism, quality,
             log.info( "Selected ", length(projectnames), " projects using organism(s) ", 
                     paste(organism, collapse=" ") );
             
-            log.warning( "Warning, ", length(projectnamesBackup) - length(projectnames), 
+            # register step status
+            #
+            registerExpStepWarning(PARAMETER_SANITY, 
+                    length(projectnamesBackup) - length(projectnames), 
                     " projects filtered out by organism filter and will not be computed");
+            
         }
     }
     
@@ -748,6 +886,7 @@ createFastQProjects <- function( accession, organism, quality,
     # init default project
     #
     project0$basedir = basedir;
+    project0$psrdir = psrdir;
     project0$datadir = datadir;
     project0$refdir = refdir;
     
@@ -806,21 +945,34 @@ createFastQProjects <- function( accession, organism, quality,
         if ( length(scales0) > 1 && options$aligner == "tophat" 
                 && !getPipelineOption("ignorequalityerrors") ) {
             
+            
+            # register step status
+            #
             log.info( "\tQuality scales of several fastq files are different. " );
             log.info( "\tTry increasing the 'fastqreadmax' pipeline option, using " );
             log.info( "\tgetPipelineOptions('fastqreadmax' = 100000), or disable" ); 
             log.info( "\tquality errors using option 'ignorequalityerrors'." );
+            
+            registerExpStepFailure(OBTAINING_METADATA, 
+                    "Quality canot be automatically determined.");
+            
             stop();
         }
     }
     
     metadata = list();
     
+    metadata$psrdir = psrdir;
     metadata$basedir = basedir;
     metadata$datadir = datadir;
     metadata$refdir = refdir;
     
     attr(projects, 'metadata') = metadata;
+    
+    # register step status
+    #
+    registerExpStepCompleted(OBTAINING_METADATA);
+    registerExpStepCompleted(METADATA_SANITY);
     
     return( projects );
 }
@@ -993,22 +1145,39 @@ setUserOptions <- function( project, options ) {
     #
     
     if( project$count$method == "mmseq" && !(project$aligner$type %in% c("tophat", "bowtie")) ) {
-        log.info( "MMSEQ can only be used with the output of Tophat or Bowtie" );
-        stop()
+        
+        # register step status
+        #
+        registerExpStepFailure(PARAMETER_SANITY, 
+                "MMSEQ can only be used with the output of Tophat or Bowtie");
+        
+        stop();
     }
 
     if( project$count$method == "cufflinks" && !(project$aligner$type == "tophat") ) {
-        log.info( "Cufflinks can only be used with the output of Tophat" )
+        # register step status
+        #
+        registerExpStepFailure(PARAMETER_SANITY, 
+                "Cufflinks can only be used with the output of Tophat");
+        
         stop();
     }
 
     if( project$count$method == "count" && project$reference$type != "transcriptome" ) {
-        log.info( "Count can only be used using a transcriptome as reference" );
+        # register step status
+        #
+        registerExpStepFailure(PARAMETER_SANITY, 
+                "Count can only be used using a transcriptome as reference");
+        
         stop();
     }
 
     if( project$reference$type == "transcriptome" && project$count$feature != "transcript" ) {
-        log.info( "When using the transcriptome as the reference only transcript level counts are allowed" );
+        # register step status
+        #
+        registerExpStepFailure(PARAMETER_SANITY, 
+                "When using the transcriptome as the reference only transcript level counts are allowed" );
+        
         stop();
     }
     
@@ -1047,7 +1216,11 @@ fixedOptions <- function( project ) {
     project$aligner$indexes_dir = paste( project$refdir, '/', project$aligner$type, "_indexes/", organismversion, sep="" )
     
     if(!file.exists( project$aligner$indexes_dir ) && project$aligner$type != "custom" ) {
-        log.info('Error: could not find ', project$aligner$indexes_dir);
+        # register step status
+        #
+        registerExpStepFailure(REFERENCE_SANITY, 
+                'Could not find ', project$aligner$indexes_dir );
+        
         stop();
     }
     
@@ -1061,6 +1234,10 @@ fixedOptions <- function( project ) {
     fail = download_annotation( project, run = TRUE )
     
     if( fail ) {
+        
+        registerExpStepFailure(REFERENCE_SANITY, 
+                'Could not download annotation');
+        
         stop();
     }
     
@@ -1318,13 +1495,14 @@ getCurrentRefVersion <- function( organism, refdir ) { # project
     version = supportedVersions[names(supportedVersions) %in% organism]
     
     if( length(version) == 0 ) {
+        # register step status
+        #
         log.info( "\tOrganism ", organism, " is not available on the filesystem." )
         log.info( "\tPlease use prepareReference and prepareAnnotation to get reference " )
         log.info( "\tand annotation for ", organism );
         
-        #version = prepareReference( project$organism, project$reference$type, 
-        #        "current", project$refdir, 
-        #        project$aligner$type, run = TRUE )
+        registerExpStepFailure(REFERENCE_SANITY, 
+                "No reference found for ", organism );
         
         stop();
     

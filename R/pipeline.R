@@ -1,3 +1,6 @@
+#
+#  Alignment, Estimation, Report & Util Routines
+#
 
 align <- function( update = FALSE, sure.i.want.to.run.this = FALSE ) {
     trace.enter("align");
@@ -7,7 +10,12 @@ align <- function( update = FALSE, sure.i.want.to.run.this = FALSE ) {
                     .project$aligner$files[1], sep="")) ) ) {
         fail = tryCatch( do.call(paste( "align_", .project$aligner$type, sep="" ), 
                         list( run=sure.i.want.to.run.this )),
-                error = function(e) { log.info( "Error during alignment :", e) } )
+                error = function(e) { 
+                    #
+                    #
+                    registerRunStepFailure(ALIGNMENT, "Error during alignment :", e);
+                    stop();
+                })
     } else {
         log.info( "Alignment already exists. Skipping..." )
         fail = FALSE
@@ -15,6 +23,9 @@ align <- function( update = FALSE, sure.i.want.to.run.this = FALSE ) {
     if( !fail ) {
         call_samtools( sure.i.want.to.run.this, update )
     }
+    
+    recordAlignedProperties();
+    
 }
 
 align_tophat <- function( run = FALSE ) { 
@@ -327,6 +338,7 @@ call_samtools <- function( run, update = FALSE ) {
     }
     
     fail = run_cmds( cmds, run )
+    
     return(fail)
 }
 
@@ -712,8 +724,12 @@ call_normalisator <- function( eset, run = FALSE ) {
     on.exit({ trace.exit() })
     
     res = tryCatch( do.call(paste( "call_", .project$count$normalisation, sep="" ), 
-                list( run=run, e=eset )),
-                error=function(e) { log.info( "Error during normalisation: ", e) } )
+                    list( run=run, e=eset )),
+            error = function(e) { 
+                #
+                #
+                registerExpStepFailure(ASSEMBLING_ESET, "Error during normalisation: ", e);
+            } )
     return(res)
 }
 
@@ -726,7 +742,13 @@ call_estimator <- function( update = FALSE, run = FALSE ) {
     if( update || !file.exists(filename) ) {
         fail = tryCatch( do.call(paste( "call_", .project$count$method, sep="" ), 
                         list( run=run )),
-                error=function(e) { log.info( "Error during estimation :", e) } )
+                error=function(e) { 
+                    #
+                    #
+                    registerRunStepFailure(ESTIMATION, "Error during estimation :", e);
+                    stop();
+
+                });
     } else {
         log.info( "Estimates ", filename, " already exists. Skipping..." )
         fail = FALSE
@@ -756,7 +778,11 @@ call_cufflinks <- function( gtf = TRUE, run = FALSE, update = FALSE ) {
         log.info( "File ", filename, " exists." )
     } else { 
         if( .project$aligner$type != "tophat" && .project$aligner$type != "custom" ) {
-            log.warning( "WARNING! you should run cufflinks on the output of TopHat only.")
+            
+            registerExpStepWarning(PARAMETER_SANITY, 
+                    "Cufflinks should be run on the output of TopHat only.");
+            
+            log.warning( "Cufflinks should be run on the output of TopHat only.")
             cmds = c( cmds, paste( "sort -k 3,3 -k 4,4n", samf, ">", ssamf ) )
             cmds = c( cmds, paste("mv", samf, usamf) )
             cmds = c( cmds, paste("mv", ssamf, samf) )
@@ -838,10 +864,6 @@ call_count <- function( run = FALSE, update = FALSE ) {
         log.info( "Reading bam header" )
         header = scanBamHeader( filename )[[1]]$targets
         
-        #len =  regexpr( " ", names(header)[1] )[1]
-        #trans = substr( names(header), 1, len-1 )
-        #names(header) = trans
-        
         log.info( "Reading bam file" )
         bam = scanBam( filename, param=bamParam( what=c("qname", "rname"), 
                         firstmate = TRUE ) )[[1]]
@@ -850,8 +872,6 @@ call_count <- function( run = FALSE, update = FALSE ) {
         bam$qname = bam$qname[!dups]
         bam$rname = bam$rname[!dups]
         
-        
-        #trans = substr( bam$rname, 1, len-1 )
         
         trans = bam$rname
         count = table(trans)
@@ -866,9 +886,6 @@ call_count <- function( run = FALSE, update = FALSE ) {
         log.info( "Saved to ", filenames["transcript"] )
         
         bam$rname = as.character(bam$rname)
-        
-        #trans = sapply( 1:length(bam$rname), function(x) 
-        #            substr( bam$rname[x], nchar(bam$rname[x])-len+2, nchar(bam$rname[x]) ) )
         
         trans = bam$rname;
         
@@ -1441,7 +1458,7 @@ plot_raw_report <- function( seqdata, tab, update = FALSE ) {
                 plotFunction= function(){
                     plot_dustyScore_distrib( seqdata );
                 });
-        
+
         # memory usage
         print.memory.usage("Memory: plot_raw_report step 5")
         
@@ -1491,11 +1508,10 @@ number_raw_reads <- function( update = FALSE ) {
     
     filename = paste(.project$projectdir,"/number_raw_reads.RData", sep="")
     if( file.exists(filename) & !update ) {
-        log.info( "File ", filename, " exists." )
-        log.info( "Loading..." )
+        log.info( "Loading ", filename )
         load( filename )
     } else {
-        log.info( "File ", filename, " does not exist. Calling 'wc -l'" )
+        log.info( "Getting umber of reads from ", .project$fq_files[1] );
         nr = as.integer( system( paste( "wc -l <", .project$fq_files[1] ), intern = TRUE ) ) / 4
         save( nr, file=filename )
     }
@@ -1544,7 +1560,8 @@ length_raw_reads <- function() {
     return(rlength)
 }
 
-plot_aligned_report <- function( seqdata, index, hitcount, update = FALSE ) {
+#plot_aligned_report <- function( seqdata, index, hitcount, update = FALSE ) {
+plot_aligned_report <- function( update = FALSE ) {
     trace.enter("plot_aligned_report");
     on.exit({ trace.exit() })
     
@@ -1564,7 +1581,7 @@ plot_aligned_report <- function( seqdata, index, hitcount, update = FALSE ) {
         HTMLInitFile( outdir=report_dir, filename=filename, Title="Quality report on aligned reads" )
         HTML( "<h1>Run info</h1>" )
         HTML( paste("Project name:", .project$name) )
-        HTML( paste("Run length:", width(seqdata[[1]])[1]) )
+        HTML( paste("Read length:", getReadLength0(.project$fq_files[[1]]) )) ## width(seqdata[[ 1 ]])[1])
         HTML( paste("Paired:", .project$pairing$type) )
         HTML( paste("Stranded:", .project[["stranded"]]) )
         HTML( paste("Quality scale:", .project$qual_type) )
@@ -1583,7 +1600,7 @@ plot_aligned_report <- function( seqdata, index, hitcount, update = FALSE ) {
         myHTMLplot( GraphDirectory=report_dir, Width=2*width, Height=height,
                 Align=algn, GraphFileName="hits", 
                 plotFunction=function(){
-                    plot_hits( length(seqdata[[1]]), bam_filename );
+                    plot_hits( number_raw_reads(), bam_filename ); ## length(seqdata[[ 1 ]])
                 });
       
         # memory usage

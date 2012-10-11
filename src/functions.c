@@ -22,7 +22,7 @@ void getReadLength(const char** infname , int* length) {
     length[0] = 0;
     
     if((infile = fopen(infname[0], "r")) == NULL) { 
-        printf("Error opening file %s\n", infname[0]); 
+        Rprintf("Error opening file %s\n", infname[0]); 
         length[0] = -1;
         
     } else {
@@ -56,14 +56,14 @@ void checkQuality(const char** infname , int* readmax, int* qualityscore) {
     int stop = 0; 
     
     if((infile = fopen(infname[0], "r")) == NULL) { 
-        printf("Error opening file %s\n", infname[0]); 
+        Rprintf("Error opening file %s\n", infname[0]); 
         qualityscore[0] = UNDEF;
         
     } else {
         qualityscore[0] = PHRED64;
     
         for(int i = 0;(i < readmax[0] && !stop); i++) {
-            /* printf("i=%d\n", i); */
+            /* Rprintf("i=%d\n", i); */
             
             fgets(line, sizeof(line), infile); // read first line and discard it
             fgets(line, sizeof(line), infile); // read second line
@@ -79,7 +79,7 @@ void checkQuality(const char** infname , int* readmax, int* qualityscore) {
                 if (line[j] < SOLEXA) {
                     qualityscore[0] = PHRED33;
                     
-                    /* printf("detected %d at read %d\n", line[j], i); */
+                    /* Rprintf("detected %d at read %d\n", line[j], i); */
                     
                     stop = 1;
                     break;
@@ -99,30 +99,30 @@ SEXP count_polyL(SEXP letter, SEXP len, SEXP seq) {
     SEXP result;
     int *p_result; 
     
-    //printf("Printed from countL2:\n");
+    //Rprintf("Printed from countL2:\n");
     
     int length = INTEGER_VALUE(len);
-    //printf("length= %d\n", length);
+    //Rprintf("length= %d\n", length);
     
     char char0 = CHAR(STRING_ELT(letter, 0))[0];
-    //printf("char0= %c\n", char0);
+    //Rprintf("char0= %c\n", char0);
     
     PROTECT(result = NEW_INTEGER(length));
     p_result = INTEGER_POINTER(result);
 
     //for (int i0=0; i0 < length; i0++) {
-    //    printf("i0=%d\n", i0);
+    //    Rprintf("i0=%d\n", i0);
     //    char *p_seq = CHAR(STRING_ELT(seq, i0));
     //    int p_seq_strlen = strlen(p_seq);
-    //    printf("p_seq_strlen=%d\n", p_seq_strlen);
-    //    printf("p_seq[%d]=%s\n", i0, p_seq);
+    //    Rprintf("p_seq_strlen=%d\n", p_seq_strlen);
+    //    Rprintf("p_seq[%d]=%s\n", i0, p_seq);
     //}
-    //printf("p_result[0]= %d\n", p_result[0]);
+    //Rprintf("p_result[0]= %d\n", p_result[0]);
     
     int j, count;
  
     for(int i = 0; i < length; i++) { 
-        //printf("i= %d\n", i);
+        //Rprintf("i= %d\n", i);
     
         count = 0;
         j = 0;
@@ -131,40 +131,40 @@ SEXP count_polyL(SEXP letter, SEXP len, SEXP seq) {
         
         int strlength = strlen(p_seq);
         
-        //printf("strlength= %d\n", strlength);
-        //printf("p_seq[j]= %c\n", p_seq[j]);
+        //Rprintf("strlength= %d\n", strlength);
+        //Rprintf("p_seq[j]= %c\n", p_seq[j]);
         
         while( j < strlength && p_seq[j] == char0 ) {
             count++;
             j++;
         
-            //printf("count= %d\n", count);
-            //printf("j= %d\n", j);
+            //Rprintf("count= %d\n", count);
+            //Rprintf("j= %d\n", j);
         }
         
         p_result[i] = count;
         
-        //printf("p_result[i]= %d\n", p_result[i]);
+        //Rprintf("p_result[i]= %d\n", p_result[i]);
         
         count = 0;
         j = strlength -1;
         
-        //printf("j= %d\n", j);
-        //printf("p_seq[j]= %c\n", p_seq[j]);
+        //Rprintf("j= %d\n", j);
+        //Rprintf("p_seq[j]= %c\n", p_seq[j]);
 
         while( j >= 0 && p_seq[j] == char0 ) {
             count++;
             j--;
         
-            //printf("count= %d\n", count);
-            //printf("j= %d\n", j);
+            //Rprintf("count= %d\n", count);
+            //Rprintf("j= %d\n", j);
         }
         
         if( p_result[i] < count ) {
             p_result[i] = count; 
         }
     
-        //printf("p_result[i]= %d\n", p_result[i]);
+        //Rprintf("p_result[i]= %d\n", p_result[i]);
     }
     
     UNPROTECT(1);
@@ -178,10 +178,10 @@ SEXP phred_to_average_qual(SEXP len, SEXP quals) {
     SEXP result;
     double *p_result; 
     
-    //printf("Printed from phred_to_average_qual2:\n");
+    //Rprintf("Printed from phred_to_average_qual2:\n");
     
     int length = INTEGER_VALUE(len);
-    //printf("length= %d\n", length);
+    //Rprintf("length= %d\n", length);
     
     PROTECT(result = NEW_NUMERIC(length));
     p_result = NUMERIC_POINTER(result);
@@ -254,10 +254,10 @@ SEXP is_polyX( SEXP len, SEXP lim, SEXP base, SEXP seq) {
     int *p_result; 
     
     int length = INTEGER_VALUE(len);
-    //printf("length= %d\n", length);
+    //Rprintf("length= %d\n", length);
     
     int limit = INTEGER_VALUE(lim);
-    //printf("limit= %d\n", limit);
+    //Rprintf("limit= %d\n", limit);
     
     PROTECT(result = NEW_INTEGER(length));
     p_result = INTEGER_POINTER(result);

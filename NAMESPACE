@@ -34,7 +34,7 @@ id, readFastq, srFilter, tables)
 
 importFrom(Biobase, read.AnnotatedDataFrame, estimateSizeFactors)
 
-importFrom(Biostrings, BStringSet, DNAStringSet, fasta.info, readFASTA)
+importFrom(Biostrings, BStringSet, DNAStringSet, fasta.info, readDNAStringSet)
 
 importFrom(DESeq, estimateVarianceFunctions,
 nbinomTest, newCountDataSet)
@@ -73,6 +73,10 @@ importFrom(stats, density, ecdf, end, quantile, runif, start)
 
 importFrom(svMisc, progress)
 
+importFrom(sendmailR, sendmail, mime_part)
+
 importFrom(utils, assignInNamespace, combn, download.file, read.table,
 write.table)
+
+importFrom(bitops, bitAnd)
 

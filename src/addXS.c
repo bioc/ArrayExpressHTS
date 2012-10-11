@@ -39,16 +39,16 @@ void addXS( const char *infname, const char *outfname, int *res ) {
     
     int index; 
     
-    printf("What?\n");
+    Rprintf("What?\n");
     if((infile = fopen(infname, "r")) == NULL) { 
-         printf("Error Opening File %s\n", infname); 
+        Rprintf("Error Opening File %s\n", infname); 
         res[0]=1; 
     } else if((outfile = fopen(outfname, "w")) == NULL) { 
-           printf("Error Creating File %s\n", outfname); 
+        Rprintf("Error Creating File %s\n", outfname); 
            res[0]=1;  
     } else {
         while( fgets(line, sizeof(line), infile) != NULL ) { 
-            //printf("l=%s", line);
+            //Rprintf("l=%s", line);
             
             pastefield(result, &last2, strtok_r (line, LINESEP, &last), LINESEP); // first field
             
@@ -75,7 +75,7 @@ void addXS( const char *infname, const char *outfname, int *res ) {
             // terminate
             last2[0] = 0;
             
-            //printf("r=%s", result);
+            //Rprintf("r=%s", result);
             //fprintf(outfile, "%s", result);
             fputs(result, outfile);
         } 

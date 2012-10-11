@@ -24,10 +24,10 @@ struct hashtable;
  *      {     exit(-1);               }
  *
  *      if (NULL == (found = hashtable_search(h,k) ))
- *      {    printf("not found!");                  }
+ *      {    Rprintf("not found!");                  }
  *
  *      if (NULL == (found = hashtable_remove(h,k) ))
- *      {    printf("Not found\n");                 }
+ *      {    Rprintf("Not found\n");                 }
  *
  */
 

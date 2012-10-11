@@ -32,7 +32,7 @@ myHTMLplot = function (Caption = "", file = get(".HTML.file"), append = TRUE,
             dev.off()
         }
     } else {
-        log.info(paste(GraphSaveAs, "is not supported"));
+        log.error(paste(GraphSaveAs, "is not supported"));
         stop();
     }
     
@@ -50,9 +50,7 @@ myHTMLplot = function (Caption = "", file = get(".HTML.file"), append = TRUE,
     }
     cat("</p>", file = file, append = TRUE, sep = "\n")
     if (substitute(file) == ".HTML.file") 
-        try(assign(".HTML.graph", TRUE, env = get("HTMLenv", 
-    
-    envir = .GlobalEnv)))
+        try(assign(".HTML.graph", TRUE, envir = get("HTMLenv", envir = .GlobalEnv)))
     invisible(return(TRUE))
 }
 

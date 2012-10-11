@@ -28,6 +28,7 @@
                     nnodes        = "automatic",
                     pool          = c("4G", "8G", "16G", "32G", "64G"),
                     nretries      = 4),
+            steplist = c("align", "count", "eset"),
             dir = getwd(),
             refdir = getDefaultReferenceDir(),
             want.reports = TRUE,
@@ -47,11 +48,11 @@
         prompted to increase the detection depth or set the quality scale manually. "FastqQuality" corresponds 
         to \code{Phred+33}, "SFastqQuality" corresponds to \code{Phred+64}. 
     }
-    \item{options}{ defines pipeline options }
+    \item{options}{ defines pipeline options. See \code{\link{getDefaultProcessingOptions}} }
     \item{usercloud}{ defines if the R Cloud will be used to parallel experiment computation. 
         If set to FALSE, the experiment files will be processed sequentially. }
-    \item{rcloudoptions}{ defines R Cloud options - umber of nodes in the cluster, 
-        server pool and number of attempts to allocate a cluster. Only valid if \code{usercloud} is TRUE }
+    \item{rcloudoptions}{ defines R Cloud options. See \code{\link{getDefaultRCloudOptions}} }
+    \item{steplist}{ defines the steps the pipeline will perform }
     \item{dir}{ folder where experiment data will be stored and processed. Default is current directory. }
     \item{refdir}{ the directory where reference data is located. }
     \item{want.reports}{ defines if quality reports are produced. Reports usually make 

@@ -171,16 +171,20 @@ readENADataForRunID = function(enarunid) {
     
     if (length(expidxml) > 0)  {
         
-        result$enaexpid = xmlToList(expidxml[[1]])[["accession"]];
+        # FIX: incompatibility
+        #
+        #result$enaexpid = xmlToList(expidxml[[1]])[["accession"]];
+        result$enaexpid = xmlToList( expidxml[[1]] )[[".attrs"]][["accession"]];
     
         
     } else {
-        #
-        # BIG FAILURE
-        #
+        
         # unable to read library layout
         #
-        log.warning(enarunid, ' Warning: No Experiment ID Found in ', rundocurl);
+        # register step status
+        #
+        registerExpStepWarning(METADATA_SANITY, 
+                enarunid, ' No Experiment ID Found in ', rundocurl);
         
         result$error$ENAExpIDNotFound = 1;
     }
@@ -215,8 +219,33 @@ readENADataForRunID = function(enarunid) {
                 
                 descriptorurl = unlist(l$XREF_LINK$ID);
                 
-                descriptor = read.table(url(descriptorurl), header = TRUE, sep = "\t",
-                                            row.names = NULL, stringsAsFactors = FALSE, fill = TRUE);
+                cnt0025 = 3;
+                while(cnt0025 >= 0) {
+                    # Retries to overcome
+                    # ENA interface bug
+                    #
+                    descriptor = try({ read.table(url(descriptorurl), header = TRUE, sep = "\t",
+                                        row.names = NULL, stringsAsFactors = FALSE, fill = TRUE) });
+                    
+                    if (inherits(descriptor, "try-error")) {
+                        sendReminder(descriptorurl, descriptor);
+                        
+                        if (cnt0025 == 0) {
+                            #
+                            #
+                            registerExpStepFailure(OBTAINING_METADATA,
+                                    "Failed ENA Interface: read.table(url(", descriptorurl,"))");
+                            
+                            stop();
+                        }
+                    } else {
+                        #
+                        # break from the loop
+                        #
+                        break;
+                    }
+                }
+                
                 
                 indexesall = seq(descriptor[['File.Name']]);
                 
@@ -226,8 +255,10 @@ readENADataForRunID = function(enarunid) {
                     indexesout = indexesall[is.na(match(indexesall, indexesin))];
                     
                     for(i001 in indexesout) {
-                        log.warning(descriptor[['Run']][i001],
-                        ' Warning: Missing FastQ, ENA value: ', descriptor[['File.Name']][i001]); 
+                        
+                        registerExpStepWarning(METADATA_SANITY,
+                                descriptor[['Run']][i001], ' Missing FastQ, ENA value: ', 
+                                descriptor[['File.Name']][i001]);
                         
                     }
                 }
@@ -249,14 +280,17 @@ readENADataForRunID = function(enarunid) {
     # produce warning log
     #
     if (!is.null(result$error$ENASampleIDNotFound)) {
-        log.warning(enarunid, ' Warning: No Sample ID Found in ', rundocurl);
+        
+        registerExpStepWarning(METADATA_SANITY,
+                enarunid, ' No Sample ID Found in ', rundocurl);
     }
 
 
     # produce warning log
     #
     if (!is.null(result$error$ENAFastQFileNotFound)) {
-        log.warning(enarunid, ' Warning: No FastQ File Found in ', rundocurl);
+        registerExpStepWarning(METADATA_SANITY,
+                enarunid, ' No FastQ File Found in ', rundocurl);
     }
     
     if (is.null(result$error$ENAExpIDNotFound)) {
@@ -291,7 +325,8 @@ readENADataForRunID = function(enarunid) {
                 #result$layout$NOMINAL_SDEV = layout$PAIRED['NOMINAL_SDEV']
             }
         } else {
-            log.warning(enarunid, " Warning: No Library Layout found in ", expdocurl);
+            registerExpStepWarning(METADATA_SANITY,
+                    enarunid, " No Library Layout found in ", expdocurl);
             
             # set error
             #
@@ -316,8 +351,9 @@ readENADataForRunID = function(enarunid) {
             result$sampletaxon = xmlToList(taxonxml[[1]]);
             
         } else {
-        
-            log.warning(enarunid, " Warning: No Taxon ID found in ", sampledocurl);
+            
+            registerExpStepWarning(METADATA_SANITY,
+                    enarunid, " No Taxon ID found in ", sampledocurl);
             
             # taxon not found
             # can't think of any case where it's really
@@ -347,7 +383,8 @@ readENADataForRunID = function(enarunid) {
             } else {
                 # bad news
                 #
-                log.warning(enarunid, ' Warning: No Sample Name Found in ', sampledocurl);
+                registerExpStepWarning(METADATA_SANITY,
+                        enarunid, ' No Sample Name Found in ', sampledocurl);
                 
                 result$error$ENASampleNameNotFound = 1;
             }
@@ -396,8 +433,32 @@ readENADataForExpID = function(enaexpid) {
                 
                 descriptorurl = unlist(l$XREF_LINK$ID);
                 
-                descriptor = read.table(url(descriptorurl), header = TRUE, sep = "\t", 
-                    row.names = NULL, stringsAsFactors = FALSE, fill = TRUE)
+                cnt0025 = 3;
+                while(cnt0025 >= 0) {
+                    # Retries to overcome
+                    # ENA interface bug
+                    #
+                    descriptor = try({ read.table(url(descriptorurl), header = TRUE, sep = "\t", 
+                                        row.names = NULL, stringsAsFactors = FALSE, fill = TRUE) });
+                    
+                    if (inherits(descriptor, "try-error")) {
+                        sendReminder(descriptorurl, descriptor);
+                        
+                        if (cnt0025 == 0) {
+                            #
+                            #
+                            registerExpStepFailure(OBTAINING_METADATA,
+                                    "Failed ENA Interface: read.table(url(", descriptorurl,"))");
+                            
+                            stop();
+                        }
+                    } else {
+                        #
+                        # break from the loop
+                        #
+                        break;
+                    }
+                }
                 
                 indexesall = seq(descriptor[['File.Name']]);
                 
@@ -408,8 +469,9 @@ readENADataForExpID = function(enaexpid) {
                     indexesout = indexesall[is.na(match(indexesall, indexesin))];
                     
                     for(i001 in indexesout) {
-                        log.warning(descriptor[['Run']][i001], 
-                            ' Warning: Missing FastQ, ENA value: ', descriptor[['File.Name']][i001]); 
+                        registerExpStepWarning(METADATA_SANITY,
+                                descriptor[['Run']][i001], ' Missing FastQ, ENA value: ', 
+                                descriptor[['File.Name']][i001]);
                     
                     }
                 }
@@ -423,7 +485,8 @@ readENADataForExpID = function(enaexpid) {
             }
         }
     } else {
-        log.warning(enaexpid, ' Warning: No FastQ links found in ', expdocurl);
+        registerExpStepWarning(METADATA_SANITY,
+                enaexpid, ' No FastQ links found in ', expdocurl);
     }
     
     
@@ -452,7 +515,8 @@ readENADataForExpID = function(enaexpid) {
             #result$layout$NOMINAL_SDEV = layout$PAIRED['NOMINAL_SDEV']
         }
     } else {
-        log.warning(enaexpid, ' Warning: No Library Layout found in ', expdocurl);
+        registerExpStepWarning(METADATA_SANITY,
+                enaexpid, ' No Library Layout found in ', expdocurl);
     }
     
     
@@ -462,7 +526,11 @@ readENADataForExpID = function(enaexpid) {
     samplexml = expdoc["//SAMPLE_DESCRIPTOR"];
     
     if (length(samplexml) > 0) {
-        sampleid = xmlToList(samplexml[[1]])[['accession']];
+        
+        # FIX: incompatibility
+        #
+        #sampleid = xmlToList(samplexml[[1]])[['accession']];
+        sampleid = xmlToList(samplexml[[1]])[[".attrs"]] [["accession"]]
         
         sampledocurl = makeENAExpURL(sampleid)
         
@@ -473,7 +541,9 @@ readENADataForExpID = function(enaexpid) {
         if (length(taxonxml) > 0) {
             result$sampletaxon = xmlToList(taxonxml[[1]]);
         } else {
-            log.warning(enaexpid, ' Warning: No Taxon ID found in ', sampledocurl);
+
+            registerExpStepWarning(METADATA_SANITY,
+                    enaexpid, ' No Taxon ID found in ', sampledocurl);
         }
         
         # get common sample name
@@ -494,13 +564,15 @@ readENADataForExpID = function(enaexpid) {
                 result$samplename = xmlToList(commonnamexml[[1]]);
             
             } else {
-                log.warning(enaexpid, ' Warning: No Sample Name found in ', sampledocurl);
+                registerExpStepWarning(METADATA_SANITY,
+                        enaexpid, ' No Sample Name found in ', sampledocurl);
             }
         }
     
     
     } else {
-        log.warning(enaexpid, ' Warning: No Sample ID found in ', expdocurl);
+        registerExpStepWarning(METADATA_SANITY,
+                enaexpid, ' No Sample ID found in ', expdocurl);
     }
     
     return(result);
@@ -619,26 +691,33 @@ readSDRF = function(fname) {
 
 # read SDRF field
 #
-getDataFromSDRF = function(sdrf, record) {
+getDataFromSDRF = function(accession, sdrf, record) {
     trace.enter("getDataFromSDRF");
     on.exit({ trace.exit() })
     
     if (!is.null(sdrf)) {
+        
+        indexes0 = getSupportedStrategyRowIndexes(accession, sdrf, getPipelineOption("supportedLibrary"));
+        #indexes0 = getSupportedSelectionRowIndexes(accession, sdrf, getPipelineOption("supportedSelection"));
+        
+        if (is.null(indexes0)) {
+            return(record);
+        }
         
         record$assayname = c();
         record$sdrfrunid = c();
         record$sdrfexpid = c();
         record$sdrforganism = c();
         
-        assays   = getAssayNameFromSDRF(sdrf)
-        runid    = getRunIDFromSDRF(sdrf);
-        organism = getOrganismFromSDRF(sdrf);
+        assays   = getAssayNameFromSDRF(sdrf)[ indexes0 ];
+        runid    = getRunIDFromSDRF(sdrf)[ indexes0 ];
+        organism = getOrganismFromSDRF(sdrf)[ indexes0 ];
         
         index = grep("ENA_EXPERIMENT", names(sdrf@data));
         
         if (length(index) > 0) {
-            for( i in 1:length(sdrf@data[[ index[1] ]]) ) {
-                expidrow = sdrf@data[i, index];
+            for( i in 1:length(indexes0) ) {
+                expidrow = sdrf@data[indexes0[[ i ]], index];
                 expidrow = expidrow[ !is.na(expidrow) & expidrow != "" ]; 
                 
                 if (length(expidrow) > 0) {
@@ -704,6 +783,41 @@ getOrganismFromSDRF = function(sdrf) {
     
     return(NULL);
 }
+
+# read LIBRARY_STRATEGY
+#
+#
+getLibraryStrategyFromSDRF = function(sdrf) {
+    trace.enter("getLibraryStrategyFromSDRF");
+    on.exit({ trace.exit() })
+    
+    if (!is.null(sdrf)) {
+        index = grep("LIBRARY_STRATEGY", names(sdrf@data));
+        if (length(index) > 0) {
+            return(sdrf@data[[ index[1] ]]);
+        }
+    }
+    
+    return(NULL);
+}
+
+# read LIBRARY_SELECTION
+#
+#
+getLibrarySelectionFromSDRF = function(sdrf) {
+    trace.enter("getLibrarySelectionFromSDRF");
+    on.exit({ trace.exit() })
+    
+    if (!is.null(sdrf)) {
+        index = grep("LIBRARY_SELECTION", names(sdrf@data));
+        if (length(index) > 0) {
+            return(sdrf@data[[ index[1] ]]);
+        }
+    }
+    
+    return(NULL);
+}
+
 
 # read FactorValue
 #
@@ -828,7 +942,13 @@ mapAEtoENAviaHTTP = function(accession, sdrffname) {
     record = list(accession=accession, sdrffname=sdrffname);
     
     if (!file.exists(sdrffname)) {
-        log.error(accession, " Error: SDRF not found ", sdrffname);
+        
+        # register step status
+        #
+        registerExpStepFailure(OBTAINING_METADATA,
+                accession, " Error: SDRF not found ", sdrffname);
+        
+        stop();
         
         record$error$SDRFNotFound = 1;
         
@@ -837,14 +957,19 @@ mapAEtoENAviaHTTP = function(accession, sdrffname) {
     
         if (inherits(sdrf0, 'try-error')) {
         
-            log.error(accession, " Error: cannot read SDRF ", sdrffname);
+            # register step status
+            #
+            registerExpStepFailure(OBTAINING_METADATA,
+                    accession, " Failed to read SDRF ", sdrffname);
+            
+            stop();
             
             record$error$SDRFNotReadable = 1;
            
         } else {
             #log.info('getting EXP IDs..');
             
-            record = getDataFromSDRF(sdrf0, record);
+            record = getDataFromSDRF(accession, sdrf0, record);
             
             #record$assayname = getAssayNameFromSDRF(sdrf0)
             #record$sdrfrunid = getRunIDFromSDRF(sdrf0);
@@ -865,7 +990,10 @@ mapAEtoENAviaHTTP = function(accession, sdrffname) {
                         
                         # bad news
                         #
-                        log.warning(accession," Warning: Missing RUNIDs in SDRF");
+                        # register status
+                        #
+                        registerExpStepWarning(METADATA_SANITY,
+                                accession," Missing RUNIDs in SDRF");
                         
                         record$error$SDRFSomeRunIDMissing = 1;
                     }
@@ -881,7 +1009,8 @@ mapAEtoENAviaHTTP = function(accession, sdrffname) {
                 } else {
                     # bad news
                     #
-                    log.warning(accession," Warning: RUNID Section in SDRF is NA");
+                    registerExpStepWarning(METADATA_SANITY,
+                            accession," RUNID Section in SDRF is NA");
                     
                     record$error$SDRFRunIDNotFound = 1;
                 }
@@ -889,7 +1018,8 @@ mapAEtoENAviaHTTP = function(accession, sdrffname) {
             } else {
                 # bad news
                 #
-                log.warning(accession," Warning: No RUNID Section in SDRF");
+                registerExpStepWarning(METADATA_SANITY,
+                        accession," No RUNID Section in SDRF");
                 
                 record$error$SDRFRunIDNotFound = 1;
             }
@@ -905,7 +1035,8 @@ mapAEtoENAviaHTTP = function(accession, sdrffname) {
                     if (any(record$sdrfexpid == "")) {
                         # bad news
                         #
-                        log.warning(accession," Warning: Missing EXPIDs in SDRF");
+                        registerExpStepWarning(METADATA_SANITY,
+                                accession," Missing EXPIDs in SDRF");
                         
                         record$error$SDRFSomeExpIDMissing = 1;
                     }
@@ -923,7 +1054,8 @@ mapAEtoENAviaHTTP = function(accession, sdrffname) {
                 } else {
                     # bad news
                     #
-                    log.warning(accession," Warning: EXPID Section in SDRF is NA");
+                    registerExpStepWarning(METADATA_SANITY,
+                            accession," EXPID Section in SDRF is NA");
                     
                     record$error$SDRFExpIDNotFound = 1;
                 }
@@ -931,8 +1063,9 @@ mapAEtoENAviaHTTP = function(accession, sdrffname) {
             } else {
                 # bad news
                 #
-                log.warning(accession," Warning: No EXPID Section in SDRF");
-                
+                registerExpStepWarning(METADATA_SANITY,
+                        accession," No EXPID Section in SDRF");
+
                 record$error$SDRFExpIDNotFound = 1;
             }
         }
@@ -940,6 +1073,107 @@ mapAEtoENAviaHTTP = function(accession, sdrffname) {
     
     
     return(record);
+}
+
+
+#
+# get SDRF rows that have "RNA-Seq" in the LIBRARY_STRATEGY
+# 
+getSupportedStrategyRowIndexes = function(accession, sdrf0, supportedLibraries) {
+    trace.enter("getSupportedStrategyRowIndexes");
+    on.exit({ trace.exit() })
+    
+    # get library strategies
+    #
+    strategies0 = getLibraryStrategyFromSDRF( sdrf0 );
+    
+    # check if the library is defined
+    
+    if (!is.null(strategies0)) {
+        
+        indexes0 = c(); 
+        
+        for(lib0 in supportedLibraries) { 
+            indexes0 = c(indexes0, grep(tolower( lib0 ), tolower( strategies0 ))); 
+        }
+        
+        #indexes0 = grep(tolower("RNA-Seq"), tolower( strategies0 ));
+        
+        if (length( indexes0 ) > 0) {
+            return( indexes0 );
+            
+        } else {
+            log.info(accession, "No supported LIBRARY_STRATEGY found");
+            
+            for(s0 in strategies0) {
+                log.info("\t", s0);
+            }
+            
+            registerExpStepFailure(METADATA_SANITY,
+                    accession, " No supported LIBRARY_STRATEGY found");
+            
+            stop();
+            # return(NULL);
+        }
+    }
+    
+    registerExpStepWarning(METADATA_SANITY,
+            accession, " LIBRARY_STRATEGY is not defined in SDRF");
+    
+    
+    stop();
+    
+    # return(NULL);
+}
+
+#
+# get SDRF rows that have "cDNA" in the LIBRARY_SELECTION
+# 
+getSupportedSelectionRowIndexes = function(accession, sdrf0, supportedSelection) {
+    trace.enter("getSupportedSelectionRowIndexes");
+    on.exit({ trace.exit() })
+    
+    # get library strategies
+    #
+    selections0 = getLibrarySelectionFromSDRF( sdrf0 );
+    
+    # check if the library is defined
+    
+    if (!is.null(selections0)) {
+        
+        indexes0 = c(); 
+        
+        for(lib0 in supportedSelection) { 
+            indexes0 = c(indexes0, grep(tolower( lib0 ), tolower( selections0 ))); 
+        }
+        
+        #indexes0 = grep(tolower("RNA-Seq"), tolower( selections0 ));
+        
+        if (length( indexes0 ) > 0) {
+            return( indexes0 );
+            
+        } else {
+            log.info(accession, "No supported LIBRARY_SELECTION found");
+            
+            for(s0 in selections0) {
+                log.info("\t", s0);
+            }
+            
+            registerExpStepFailure(METADATA_SANITY,
+                    accession, " No supported LIBRARY_SELECTION found");
+            
+            stop();
+            # return(NULL);
+        }
+    }
+    
+    registerExpStepWarning(METADATA_SANITY,
+            accession, " LIBRARY_SELECTION is not defined in SDRF");
+    
+    
+    stop();
+    
+    # return(NULL);
 }
 
 
@@ -1179,7 +1413,7 @@ scanAllENAData = function(data, max=400000) {
         }
         
         if (x > max) {
-            log.info('stopping...');
+            log.info('finishing...');
             return(result);
         }
     }
@@ -1384,12 +1618,12 @@ getHTSAccessionsFromAE = function(refresh = FALSE) {
     
     if (!file.exists(queryfilename) || refresh) {
         
-        #query = paste("http://wwwdev.ebi.ac.uk/microarray-as/ae/xml/v2/experiments",
+        #query = paste("http://www.ebi.ac.uk/microarray-as/ae/xml/v2/experiments",
         #"?keywords=&species=&array=&exptype[]=",
         #"&exptype[]=high+throughput+sequencing+assay&pagesize=25",
         #"&sortby=releasedate&sortorder=descending&expandefo=on",sep='');
         
-        query = paste("http://wwwdev.ebi.ac.uk/arrayexpress/xml/v2/experiments",
+        query = paste("http://www.ebi.ac.uk/arrayexpress/xml/v2/experiments",
         "?keywords=&species=&array=&exptype[]=",
         "&exptype[]=high+throughput+sequencing+assay&pagesize=25",
         "&sortby=releasedate&sortorder=descending&expandefo=on",sep='');
@@ -1431,12 +1665,12 @@ getHTSRNASeqAccessionsFromAE = function(refresh = FALSE) {
     
     if (!file.exists(queryfilename) || refresh) {
         
-        #query = paste("http://wwwdev.ebi.ac.uk/microarray-as/ae/xml/v2/experiments",
+        #query = paste("http://www.ebi.ac.uk/microarray-as/ae/xml/v2/experiments",
         #"?keywords=&species=&array=&exptype[]=",
         #"&exptype[]=high+throughput+sequencing+assay&pagesize=25",
         #"&sortby=releasedate&sortorder=descending&expandefo=on",sep='');
         
-        #query = paste("http://wwwdev.ebi.ac.uk/arrayexpress/xml/v2/experiments",
+        #query = paste("http://www.ebi.ac.uk/arrayexpress/xml/v2/experiments",
         #"?keywords=&species=&array=&exptype[]=",
         #"&exptype[]=RNA+assay&exptype[]=high+throughput+sequencing+assay&pagesize=25",
         #"&sortby=releasedate&sortorder=descending&expandefo=on",sep='');
@@ -1472,13 +1706,18 @@ getHTSRNASeqAccessionsFromAE = function(refresh = FALSE) {
 }
 
 getAEExpType = function(accession) {
+    trace.enter("getAEExpType");
+    on.exit({ trace.exit() })
     
-    expurl = paste("http://wwwdev.ebi.ac.uk/arrayexpress/xml/v2/experiments/", accession, sep="");
+    expurl = paste("http://www.ebi.ac.uk/arrayexpress/xml/v2/experiments/", accession, sep="");
     
-    expdoc = try(xmlTreeParse(readLines(expurl), asText = TRUE, useInternalNodes = TRUE), silent = TRUE);
+    suppressWarnings({
+                expdoc = try(xmlTreeParse(readLines(expurl), asText = TRUE, 
+                                useInternalNodes = TRUE), silent = TRUE);
+                });
     
     if (inherits(expdoc, 'try-error')) {
-        message("Error!");
+        log.info(expdoc);
         return(NULL);
     } else {
         links = expdoc["//experimenttype"];
@@ -1486,9 +1725,12 @@ getAEExpType = function(accession) {
     }
 }
 
+
 getAEExpDescription = function(accession) {
+    trace.enter("getAEExpDescription");
+    on.exit({ trace.exit() })
     
-    expurl = paste("http://wwwdev.ebi.ac.uk/arrayexpress/xml/v2/experiments/", accession, sep="");
+    expurl = paste("http://www.ebi.ac.uk/arrayexpress/xml/v2/experiments/", accession, sep="");
     
     expdoc = try(xmlTreeParse(readLines(expurl), asText = TRUE, useInternalNodes = TRUE), silent = TRUE);
     
@@ -1501,23 +1743,4 @@ getAEExpDescription = function(accession) {
         return(sapply(desc, function(x){ xmlValue(x) } ));
     }
 }
-
-# set opertations
-#
-#
-intersectSets = function(set1, set2) {
-    set1[ !is.na(match(set1, set2)) ]
-}
-
-addSets = function(set1, set2) {
-    #match(set1, set2)
-    unique(sort(c(set1, set2)))
-}
-
-
-substractSets = function(set1, set2) {
-    set1[ is.na(match(set1, set2)) ]
-}
-
-
 

@@ -1,3 +1,6 @@
+#
+# On-load/unload Routines
+#
 
 .onLoad <- function(libname, pkgname = "ArrayExpressHTS") {
     #library.dynam("ArrayExpressHTS", pkgname, libname)

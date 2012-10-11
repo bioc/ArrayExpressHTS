@@ -1,5 +1,5 @@
 plot_compared_hits <- function( update ) {
-    trace.enter("plot_aligned_barchart");
+    trace.enter("plot_compared_hits");
     on.exit({ trace.exit() })
     
     cols=c("darkgoldenrod","darkgoldenrod4","darkgoldenrod1")
