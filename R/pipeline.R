@@ -1679,9 +1679,9 @@ plot_aligned_report <- function( update = FALSE ) {
         #            log.info( "To be implemented" )
         #        } else {
         #            if( .project$pairing$type == "PE" ) {
-        #                aln = readGappedAlignments( bam_filename, param=bamParam(firstmate = TRUE ) )
+        #                aln = readGAlignments( bam_filename, param=bamParam(firstmate = TRUE ) )
         #            } else {
-        #                aln = readGappedAlignments( bam_filename, param=bamParam() )
+        #                aln = readGAlignments( bam_filename, param=bamParam() )
         #                annot = get_annotation( type="gtf", split = FALSE )
         #                subannot <- unique( annot[,c("chromosome_name", "strand", "ensembl_transcript_id", "ensembl_exon_id", "exon_chrom_start", "exon_chrom_end")] )
         #                
