@@ -20,7 +20,7 @@ export("ArrayExpressHTS", "ArrayExpressHTSFastQ",
 
 importMethodsFrom(Biobase, assayData, experimentData, "experimentData<-", 
 exprs, "exprs<-", fData, featureData, "featureData<-", featureNames, 
-pData, phenoData, "phenoData<-", sampleNames)
+pData, phenoData, "phenoData<-", sampleNames, read.AnnotatedDataFrame)
 
 importMethodsFrom(Biostrings, alphabetFrequency, quality)
 
@@ -32,7 +32,7 @@ importMethodsFrom(Rsamtools, ScanBamParam, scanBam, scanBamHeader)
 importMethodsFrom(ShortRead, FastqQuality, alphabetByCycle, dustyScore,
 id, readFastq, srFilter, tables)
 
-importFrom(Biobase, read.AnnotatedDataFrame, estimateSizeFactors)
+importFrom(BiocGenerics, estimateSizeFactors)
 
 importFrom(Biostrings, BStringSet, DNAStringSet, fasta.info, readDNAStringSet)
 
