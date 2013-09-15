@@ -22,6 +22,9 @@ importMethodsFrom(Biobase, assayData, experimentData, "experimentData<-",
 exprs, "exprs<-", fData, featureData, "featureData<-", featureNames, 
 pData, phenoData, "phenoData<-", sampleNames, read.AnnotatedDataFrame)
 
+importMethodsFrom(BiocGenerics, estimateSizeFactors, estimateDispersions,
+conditions, "conditions<-", counts, "counts<-", sizeFactors, "sizeFactors<-")
+
 importMethodsFrom(Biostrings, alphabetFrequency, quality)
 
 importMethodsFrom(IRanges, Rle, disjointBins, findOverlaps, subseq,
@@ -32,12 +35,10 @@ importMethodsFrom(Rsamtools, ScanBamParam, scanBam, scanBamHeader)
 importMethodsFrom(ShortRead, FastqQuality, alphabetByCycle, dustyScore,
 id, readFastq, srFilter, tables)
 
-importFrom(BiocGenerics, estimateSizeFactors)
 
 importFrom(Biostrings, BStringSet, DNAStringSet, fasta.info, readDNAStringSet)
 
-importFrom(DESeq, estimateVarianceFunctions,
-nbinomTest, newCountDataSet)
+importFrom(DESeq, estimateVarianceFunctions, nbinomTest, newCountDataSet)
 
 importFrom(GenomicRanges, GRanges)
 
