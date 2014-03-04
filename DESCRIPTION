@@ -13,4 +13,4 @@ Imports: Biobase, BiocGenerics, Biostrings, DESeq, GenomicRanges,
         stats, svMisc, utils, sendmailR, bitops
 LinkingTo: Rsamtools
 License: Artistic License 2.0
-biocViews: RNASeq, Sequencing, Sequencing
+biocViews: RNASeq, Sequencing
