@@ -723,7 +723,7 @@ reflen_to_dataframe <- function( type=.project$reference$type ) {
     reference = reftype_to_filename( type )
     filename = paste( .project$aligner$indexes_dir, "/", .project$organism, ".", 
             .project$reference$version, ".", reference, ".fa", sep="" )
-    chrinfo = fasta.info( filename )
+    chrinfo = fasta.seqlengths( filename )
     return( chrinfo )
 }
 
