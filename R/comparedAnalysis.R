@@ -180,7 +180,7 @@ to_expressionset <- function( update = FALSE, filter = TRUE ) {
             log.info( "Creating feature data from cDNA file... " );
             fa = .projects[[1]]$reference$file
             fa = paste(sub( ".dna.chromosome", ".cdna.chromosome", fa, fixed = TRUE), ".fa", sep="" )
-            lengths = fasta.info(fa)
+            lengths = fasta.seqlengths(fa)
             pos = regexpr( " ", names(lengths)[1] )
             names(lengths) = substr(names(lengths),1,pos)
             
@@ -305,7 +305,7 @@ table_transcript_overlap <- function() {
     
     fasta_files = paste( sapply( .projects, function(x) x$reference$file ), ".fa", sep="" )
     
-    lengths = lapply( fasta_files, function(x) fasta.info(x) )
+    lengths = lapply( fasta_files, function(x) fasta.seqlengths(x) )
     names( lengths ) = sapply( .projects, function(x) x$organism )
     
     tnames = lapply( lengths, function(x) names(x) )

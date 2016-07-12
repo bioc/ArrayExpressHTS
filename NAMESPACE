@@ -36,7 +36,7 @@ importMethodsFrom(ShortRead, FastqQuality, alphabetByCycle, dustyScore,
 id, readFastq, srFilter, tables)
 
 
-importFrom(Biostrings, BStringSet, DNAStringSet, fasta.info, readDNAStringSet)
+importFrom(Biostrings, BStringSet, DNAStringSet, fasta.seqlengths, readDNAStringSet)
 
 importFrom(DESeq, estimateVarianceFunctions, nbinomTest, newCountDataSet)
 

@@ -996,7 +996,7 @@ transcriptome_to_dataframe <- function() {
     
     reference_file = paste( .project$aligner$indexes_dir, "/", .project$organism, ".", 
             .project$reference$version, ".cdna.chromosome.fa", sep="" )
-    lengths = fasta.info( reference_file )
+    lengths = fasta.seqlengths( reference_file )
     tnames = names( lengths )
     
     # this should be used by default for cdna files downloaded from ENSEMBL
