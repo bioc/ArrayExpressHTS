@@ -40,11 +40,11 @@ importFrom(Biostrings, BStringSet, DNAStringSet, fasta.seqlengths, readDNAString
 
 importFrom(DESeq, estimateVarianceFunctions, nbinomTest, newCountDataSet)
 
-importFrom(GenomicRanges, GRanges)
+importFrom(GenomicRanges, GRanges, GRangesList)
 
 importFrom(Hmisc, errbar, wtd.var)
 
-importFrom(IRanges, IRanges, RangedData, RangedDataList)
+importFrom(IRanges, IRanges)
 
 importFrom(R2HTML, HTML, HTMLEndFile, HTMLInitFile, as.title)
 

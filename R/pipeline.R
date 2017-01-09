@@ -915,12 +915,17 @@ cufflinks_to_dataframe <- function() {
 cufflinks_to_iranges <- function() {
     trace.enter("cufflinks_to_iranges");
     on.exit({ trace.exit() })
+
+    message("cufflinks_to_iranges is deprecated in favor of cufflinks_to_granges");
+    message("cufflinks_to_iranges returns NULL");
     
-    ctab = cufflinks_to_dataframe()
-    ctab = split( ctab, ctab$chr ) 
-    ctabIR = lapply( ctab, function(x) RangedData( IRanges(start = x$left, end=x$right, names=x$trans_id ), strand=rep(1,length(x$trans_id)) ) )
-    ctabIR = do.call( RangedDataList, ctabIR )
-    return( ctabIR )
+    #ctab = cufflinks_to_dataframe()
+    #ctab = split( ctab, ctab$chr ) 
+    #ctabIR = lapply( ctab, function(x) RangedData( IRanges(start = x$left, end=x$right, names=x$trans_id ), strand=rep(1,length(x$trans_id)) ) )
+    #ctabIR = do.call( RangedDataList, ctabIR )
+    #return( ctabIR )
+
+    return(NULL)
 }
 
 cufflinks_to_granges <- function() {
@@ -1250,8 +1255,13 @@ annot_to_iranges <- function( annot, feature=NULL, extra="strand", update = FALS
             #annotIR = lapply( annot, function(x) lapply(x, function(y) IRanges(start = y[,"start"], end=y[,"end"], names=y[,"id"]) ) )
         }
         
-        annotIR = lapply( annot, function(y) RangedData( IRanges(start = y[,"start"], end=y[,"end"], names=y[,"id"]), y[,"strand"]) )
-        annotIR = do.call( RangedDataList, annotIR )
+        #annotIR = lapply( annot, function(y) RangedData( IRanges(start = y[,"start"], end=y[,"end"], names=y[,"id"]), y[,"strand"]) )
+        annotIR = lapply(1:length(annot), function(i) { y <- annot[[i]]; 
+                                GRanges( rep(names(annot[i]), length(y[,"start"])),  
+                                IRanges(start = y[,"start"], end= y[,"end"], names=y[,"id"]), 
+                                y[,"strand"]) } )
+        #annotIR = do.call( RangedDataList, annotIR )
+        annotIR = do.call( GRangesList, annotIR )
         save( annotIR, file=filename )
         log.info( "Saved to ", filename, "" )
     }
