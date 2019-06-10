@@ -1,5 +1,5 @@
 #include <stdio.h>  
-#include "samtools/sam.h"
+#include "sam.h"
 #include "hashtable.h"
 #include "hashtable_itr.h"
 #include "hashtable_utility.h"
