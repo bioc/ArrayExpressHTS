@@ -7,7 +7,7 @@ Maintainer: Angela Goncalves <filimon@ebi.ac.uk>, Andrew Tikhonov
 Description: RNA-Seq processing pipeline for public ArrayExpress
         experiments or local datasets
 Depends: sampling, Rsamtools (>= 1.99.0), snow
-Imports: Biobase, BiocGenerics, Biostrings, DESeq, GenomicRanges,
+Imports: Biobase, BiocGenerics, Biostrings, GenomicRanges,
         Hmisc, IRanges (>= 2.13.11), R2HTML, RColorBrewer, Rsamtools,
         ShortRead, XML, biomaRt, edgeR, grDevices, graphics, methods, rJava,
         stats, svMisc, utils, sendmailR, bitops
