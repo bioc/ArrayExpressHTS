@@ -38,7 +38,7 @@ id, readFastq, srFilter, tables)
 
 importFrom(Biostrings, BStringSet, DNAStringSet, fasta.seqlengths, readDNAStringSet)
 
-importFrom(DESeq, estimateVarianceFunctions, nbinomTest, newCountDataSet)
+#importFrom(DESeq, estimateVarianceFunctions, nbinomTest, newCountDataSet)
 
 importFrom(GenomicRanges, GRanges, GRangesList)
 

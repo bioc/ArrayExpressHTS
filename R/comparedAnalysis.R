@@ -261,15 +261,19 @@ get_DE <- function( e, factor ) {
     cb = combn( unique(pData(e)[[factor]]), 2 )
     conds <- c( pData(e)[[factor]] )
     for( i in 1:ncol(cb) ) {
-        cds <- newCountDataSet( round(exprs(e)), conds, phenoData=phenoData(e), featureData=featureData(e) )
+        #cds <- newCountDataSet( round(exprs(e)), conds, phenoData=phenoData(e), featureData=featureData(e) )
+        cds <- NULL
         cds <- estimateSizeFactors( cds )
         # if there is only a monoplicate :) for each condition, use pooling
         if( sum(conds == cb[1,i]) + sum(conds == cb[2,i]) == 2 ) {
-            cds <- estimateVarianceFunctions( cds, pool = TRUE )
+            #cds <- estimateVarianceFunctions( cds, pool = TRUE )
+            cds <- NULL
         } else {
-            cds <- estimateVarianceFunctions( cds )
+            #cds <- estimateVarianceFunctions( cds )
+            cds <- NULL
         }
-        res[[paste(cb[1,i], cb[2,i], sep="x")]] <- nbinomTest( cds, cb[1,i], cb[2,i] )
+        #res[[paste(cb[1,i], cb[2,i], sep="x")]] <- nbinomTest( cds, cb[1,i], cb[2,i] )
+        res[[paste(cb[1,i], cb[2,i], sep="x")]] <- NULL
     }
     return( res )
 }
