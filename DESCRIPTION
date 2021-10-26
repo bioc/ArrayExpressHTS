@@ -1,6 +1,6 @@
 Package: ArrayExpressHTS
 Title: ArrayExpress High Throughput Sequencing Processing Pipeline
-Version: 1.43.0
+Version: 1.44.0
 Author: Angela Goncalves, Andrew Tikhonov
 Maintainer: Angela Goncalves <filimon@ebi.ac.uk>, Andrew Tikhonov
         <andrew@ebi.ac.uk>
