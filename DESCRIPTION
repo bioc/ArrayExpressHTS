@@ -1,6 +1,6 @@
 Package: ArrayExpressHTS
 Title: ArrayExpress High Throughput Sequencing Processing Pipeline
-Version: 1.49.0
+Version: 1.49.1
 Author: Angela Goncalves, Andrew Tikhonov
 Maintainer: Angela Goncalves <filimon@ebi.ac.uk>, Andrew Tikhonov
         <andrew@ebi.ac.uk>
@@ -15,3 +15,4 @@ LinkingTo: Rhtslib (>= 1.15.3)
 SystemRequirements: GNU make
 License: Artistic License 2.0
 biocViews: ImmunoOncology, RNASeq, Sequencing
+PackageStatus: Deprecated
